@@ -1,5 +1,5 @@
 CreatePartition <-
-function(vec,varNames=NULL,grsize=NULL,decreasing=TRUE,uniform=FALSE,ngroup=100,mingr=10){
+function(vec,varnamesdata=NULL,subset=NULL,grsize=NULL,decreasing=TRUE,uniform=FALSE,ngroup=10,mingr=25){
 #vec <- pvalFarkas;mingr=10;ngroup=100;decreasing=FALSE;uniform=FALSE
  #vec <- pvalonly;mingr=10;ngroup=3;decreasing=FALSE;uniform=FALSE
 if(is.factor(vec)){
@@ -9,9 +9,11 @@ names(firstcl) <- levels(vec)
 if(is.numeric(vec)){
     if(uniform){
         if(is.null(grsize)){
-        print("Please specify grsize for numeric input of vec")
-        return(NULL)
+        grsize <- floor(length(vec)/ngroup)
+        print(paste("Group size set to:",grsize))
         } else {
+            print(paste("Group size",grsize))
+        }
             if(decreasing) {
                 print("Sorting vec in decreasing order, assuming small values are LESS relevant")
                 orderp2 <- order(vec,decreasing=T) 
@@ -30,7 +32,6 @@ if(is.numeric(vec)){
             }
             )
             names(firstcl) <- sapply(1:length(firstcl),function(i) paste("group",i,sep=""))
-        }
     } else {
     if(decreasing) {
                 print("Sorting vec in decreasing order, assuming small values are LESS relevant")
@@ -52,12 +53,12 @@ if(is.numeric(vec)){
     lefts <- povermin+1
     gfun2 <- function(x){1-x^(ngroup+1) - lefts*(1-x)}
     root <- uniroot(f=gfun2, lower=1.000001,upper=parint)$root
-    
-    
-    
+
     grs <- sapply(1:ngroup,function(i) if(i==1) floor(mingr*root^i) else round(mingr*root^i)) #garantees the smallest size equals mingr
     sm <- sum(grs)
     grs[ngroup] <- grs[ngroup] -(sm-p)
+    print("Summary of group sizes:")
+    print(summary(grs))
     cumul <- cumsum(c(0,grs))
     firstcl <- lapply(1:ngroup,function(xg) {
             els <- orderp2[(cumul[xg]+1):cumul[xg+1]]
@@ -71,18 +72,33 @@ if(is.numeric(vec)){
     print("Argument vec is not correctly specified")
     return(NULL)
     } else {
-        if(is.null(varNames)){
-        print("Please specify a character vector for varNames")
+        if(is.null(varnamesdata)){
+        print("Please specify a character vector for varnamesdata")
         return(NULL)
         } else {
   #      print("Please verify that length(varNames) equals the number of variables (features; usually rows) in your data")
   #vec=genesroepman;varNames=genes
-        whin <- match(vec,varNames)
+        whin <- match(vec,varnamesdata)
         whin <- unique(whin[!is.na(whin)])
-        firstcl <- list(VarIn=whin,VarOut=(1:length(varNames))[-whin])
+        firstcl <- list(VarIn=whin,VarOut=(1:length(varnamesdata))[-whin])
         }
     }
 }
 }
+if(!is.character(vec) & !is.null(subset)){ #remapping 
+if(is.null(varnamesdata)){
+print("ERROR: varnamesdata required for subsetting")
+return(NULL)
+}
+if(length(vec) != length(subset)){
+print("ERROR: Length of vec does not match length of subset.")
+return(NULL)
+} else {
+matchss <- match(subset,varnamesdata)
+firstcl <- lapply(firstcl,function(vector) matchss[vector])
+}
+}
+print("Summary of group sizes:")
+print(unlist(lapply(firstcl,length)))
 return(firstcl)
 }

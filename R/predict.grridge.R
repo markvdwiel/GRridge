@@ -1,4 +1,23 @@
-predict.grridge = function (grr, datanew, printpred = FALSE, dataunpennew = NULL){
+predict.grridge = function (grr, datanew, printpred = FALSE, dataunpennew = NULL,responsetest=NULL,recalibrate=FALSE){
+  #grr=grNB2; datanew=seqTestcen; printpred = FALSE; dataunpennew = NULL;recalibrate=TRUE;responsetest <- clinOSTest 
+  
+  if(!(is.null(grr$arguments$dataunpen)) & recalibrate==TRUE) {
+    recalibrate <- FALSE
+    print("Recalibration currently only feasible for designs without unpenalized covariates. Recalibrate set to FALSE")
+  }
+  
+  if(grr$model=="survival" & recalibrate==TRUE) {
+    recalibrate <- FALSE
+    print("Recalibration currently only feasible for linear and binary response. Recalibrate set to FALSE")
+  }
+  
+  ntest <- ncol(datanew)
+  if(ntest < 25 & recalibrate==TRUE) {
+    recalibrate <- FALSE
+    print("Test sample size too small for recalibration. Need at least 25 test samples. Recalibrate set to FALSE")
+  }
+  
+  
   penobj <- grr$predobj
   arg <- grr$arguments
   offsarg <- arg$offset
@@ -6,22 +25,18 @@ predict.grridge = function (grr, datanew, printpred = FALSE, dataunpennew = NULL
     datanew <- data.frame(datanew)
   npred <- ncol(datanew)
   Xsam <- t(datanew)
-  if (is.null(dataunpennew)) 
-    dataunpensam <- data.frame(fake = rep(NA, npred))
-  else {
+  if (is.null(dataunpennew)) dataunpensam <- data.frame(fake = rep(NA, npred)) else {
     if (class(dataunpennew) != "data.frame") 
-      dataunpensam <- data.frame(dataunpennew)
-    else dataunpensam <- dataunpennew
+      dataunpensam <- data.frame(dataunpennew) else dataunpensam <- dataunpennew
   }
   predellall <- c()
+  predellall2 <- c()
   if (is.null(penobj)) {
     cat("No prediction objection available. Run grridge using either savepredobj=\"last\" or savepredobj=\"all\"\n")
     return(NULL)
   }
   nmp <- names(penobj)
-  if (arg$selection) 
-    npreds <- length(penobj) - 1
-  else npreds <- length(penobj)
+  if (arg$selection)  npreds <- length(penobj) - 1 else npreds <- length(penobj)
   
   # ----------------------------------------------------------------------------------------------
   # additional: unpenal (adapted from grridge.cv)
@@ -58,8 +73,7 @@ predict.grridge = function (grr, datanew, printpred = FALSE, dataunpennew = NULL
   # additional: prediction for other models (adapted from grridge.cv)
   nmp <- names(penobj)
   if (arg$selection) 
-    npreds <- length(penobj) - 1
-  else npreds <- length(penobj)
+    npreds <- length(penobj) - 1 else npreds <- length(penobj)
   if (arg$comparelasso) 
     npreds <- npreds - 1
   if (arg$compareunpenal) 
@@ -70,8 +84,15 @@ predict.grridge = function (grr, datanew, printpred = FALSE, dataunpennew = NULL
       lmvecall <- grr$lambdamultvec[, ell]
       Xsamw <- t(t(Xsam)/sqrt(lmvecall))
       predell <- predict(predobj, Xsamw, data = dataunpensam)[1:npred]
+      
       predellall <- cbind(predellall, predell)
       
+      if(recalibrate){
+        datlp <- Xsamw %*% predobj@penalized
+        refitmod <- glm(responsetest ~  1 + datlp, family="binomial")
+        predell2 <- predict(refitmod,type="response")
+      predellall2 <- cbind(predellall2, predell2)
+      }
     }
   }
   if (arg$selection) {
@@ -83,6 +104,13 @@ predict.grridge = function (grr, datanew, printpred = FALSE, dataunpennew = NULL
     Xsamw <- Xsamw[, whsel, drop = FALSE]
     predell <- predict(predobj, Xsamw, data = dataunpensam)[1:npred]
     predellall <- cbind(predellall, predell)
+    
+    if(recalibrate){
+      datlp <- Xsamw %*% predobj@penalized
+      refitmod <- glm(responsetest ~ 1 + datlp, family="binomial")
+      predell2 <- predict(refitmod,type="response")
+    predellall2 <- cbind(predellall2, predell2)
+    }
   }
   if (arg$comparelasso) {
     if (arg$selection) 
@@ -92,6 +120,14 @@ predict.grridge = function (grr, datanew, printpred = FALSE, dataunpennew = NULL
     predell <- predict(predobj, Xsam, unpenalized = unpenal, 
                        data = dataunpensam)[1:npred]
     predellall <- cbind(predellall, predell)
+    
+    if(recalibrate){
+      datlp <- Xsam %*% predobj@penalized
+      if(model=="logistic") refitmod <- glm(responsetest ~  1 + datlp, family="binomial") else
+        refitmod <- glm(responsetest ~  1 + datlp, family="gaussian")
+      predell2 <- predict(refitmod,type="response")
+      predellall2 <- cbind(predellall2, predell2)
+    }
   }
   if (arg$compareunpenal) {
     nadd <- arg$selection + arg$comparelasso
@@ -124,7 +160,10 @@ predict.grridge = function (grr, datanew, printpred = FALSE, dataunpennew = NULL
   #   }
   
   colnames(predellall) <- nmp
-  
+  if(recalibrate) {
+    colnames(predellall2) <- paste(nmp,"_recalib",sep="") 
+    predellall <- cbind(predellall,predellall2)
+    }
   if (printpred) {
     print("Prediction(s):")
     print(predellall)
