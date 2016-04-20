@@ -9,3 +9,6 @@ This is the DEVELOPMENT VERSION of GRridge. Additional functionality includes
 - Added post-weighting variable selection using elastic net
 - Allow re-calibration during testing
 - Allow survival response
+
+Installation:
+install_github("markvdwiel/GRridge",ref="GRridgeDev")
