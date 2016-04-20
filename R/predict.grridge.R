@@ -1,0 +1,134 @@
+predict.grridge = function (grr, datanew, printpred = FALSE, dataunpennew = NULL){
+  penobj <- grr$predobj
+  arg <- grr$arguments
+  offsarg <- arg$offset
+  if (class(datanew) != "data.frame") 
+    datanew <- data.frame(datanew)
+  npred <- ncol(datanew)
+  Xsam <- t(datanew)
+  if (is.null(dataunpennew)) 
+    dataunpensam <- data.frame(fake = rep(NA, npred))
+  else {
+    if (class(dataunpennew) != "data.frame") 
+      dataunpensam <- data.frame(dataunpennew)
+    else dataunpensam <- dataunpennew
+  }
+  predellall <- c()
+  if (is.null(penobj)) {
+    cat("No prediction objection available. Run grridge using either savepredobj=\"last\" or savepredobj=\"all\"\n")
+    return(NULL)
+  }
+  nmp <- names(penobj)
+  if (arg$selection) 
+    npreds <- length(penobj) - 1
+  else npreds <- length(penobj)
+  
+  # ----------------------------------------------------------------------------------------------
+  # additional: unpenal (adapted from grridge.cv)
+  unpenal <- arg$unpenal
+  if (!is.null(offsarg)) {
+    noffs <- length(offsarg)
+    offsargs <- "c("
+    if (npred > 1) {
+      if (noffs == 1) {
+        for (i in 1:(npred - 1)) offsargs <- paste(offsargs, 
+                                                   offsarg, ",", sep = "")
+      }
+      else {
+        for (i in 1:(npred - 1)) offsargs <- paste(offsargs, 
+                                                   offsarg[i], ",", sep = "")
+      }
+    }
+    if (noffs == 1) 
+      offsargs <- paste(offsargs, offsarg, ")", sep = "")
+    else offsargs <- paste(offsargs, offsarg[npred], ")", 
+                           sep = "")
+    if ((unpenal != ~0) & (unpenal != ~1)) {
+      unpenal <- formula(paste(deparse(unpenal), "+ offset(", 
+                               offsargs, ")", sep = ""))
+    }
+    else {
+      unpenal <- formula(paste("~", "offset(", offsargs, 
+                               ")", sep = ""))
+    }
+  }
+  # ----------------------------------------------------------------------------------------------
+  
+  # ----------------------------------------------------------------------------------------------
+  # additional: prediction for other models (adapted from grridge.cv)
+  nmp <- names(penobj)
+  if (arg$selection) 
+    npreds <- length(penobj) - 1
+  else npreds <- length(penobj)
+  if (arg$comparelasso) 
+    npreds <- npreds - 1
+  if (arg$compareunpenal) 
+    npreds <- npreds - 1
+  if (npreds > 0) {
+    for (ell in 1:npreds) {
+      predobj <- penobj[[ell]]
+      lmvecall <- grr$lambdamultvec[, ell]
+      Xsamw <- t(t(Xsam)/sqrt(lmvecall))
+      predell <- predict(predobj, Xsamw, data = dataunpensam)[1:npred]
+      predellall <- cbind(predellall, predell)
+      
+    }
+  }
+  if (arg$selection) {
+    predobj <- penobj[[npreds + 1]]
+    whsel <- grr$whichsel
+    nc <- ncol(grr$lambdamultvec)
+    lmvecall <- grr$lambdamultvec[, nc]
+    Xsamw <- t(t(Xsam)/sqrt(lmvecall))
+    Xsamw <- Xsamw[, whsel, drop = FALSE]
+    predell <- predict(predobj, Xsamw, data = dataunpensam)[1:npred]
+    predellall <- cbind(predellall, predell)
+  }
+  if (arg$comparelasso) {
+    if (arg$selection) 
+      take <- npreds + 2
+    else take <- npreds + 1
+    predobj <- penobj[[take]]
+    predell <- predict(predobj, Xsam, unpenalized = unpenal, 
+                       data = dataunpensam)[1:npred]
+    predellall <- cbind(predellall, predell)
+  }
+  if (arg$compareunpenal) {
+    nadd <- arg$selection + arg$comparelasso
+    take <- npreds + nadd + 1
+    predobj <- penobj[[take]]
+    predell <- predict(predobj, data = dataunpensam, 
+                       type = "response")[1:npred]
+    predellall <- cbind(predellall, predell)
+  }
+  # ----------------------------------------------------------------------------------------------
+  
+  #   if (npreds > 0) {
+  #     for (ell in 1:npreds) {
+  #       predobj <- penobj[[ell]]
+  #       lmvecall <- grr$lambdamultvec[, ell]
+  #       Xsamw <- t(t(Xsam)/sqrt(lmvecall))
+  #       predell <- predict(predobj, Xsamw, data = dataunpensam)[1:npred]
+  #       predellall <- cbind(predellall, predell)
+  #     }
+  #   }
+  #   if (arg$selection) {
+  #     predobj <- penobj[[npreds + 1]]
+  #     whsel <- grr$whichsel
+  #     nc <- ncol(grr$lambdamultvec)
+  #     lmvecall <- grr$lambdamultvec[, nc]
+  #     Xsamw <- t(t(Xsam)/sqrt(lmvecall))
+  #     Xsamw <- Xsamw[, whsel, drop = FALSE]
+  #     predell <- predict(predobj, Xsamw, data = dataunpensam)[1:npred]
+  #     predellall <- cbind(predellall, predell)
+  #   }
+  
+  colnames(predellall) <- nmp
+  
+  if (printpred) {
+    print("Prediction(s):")
+    print(predellall)
+  }
+  
+  return(predellall)
+}
