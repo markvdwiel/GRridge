@@ -10,9 +10,7 @@ predictions of binary and continuous response from high-dimension (e.g. genomics
 auxiliary information on variables (e.g. genes), such as annotation or p-values from other studies.
 }
 \usage{
-grridge(highdimdata, response, partitions, unpenal = ~1, offset=NULL, method="stable", niter=10, monotone=NULL, optl=NULL, innfold=NULL, 
-fixedfoldsinn=TRUE, selection=FALSE,maxsel=100,stepsel=1,cvlmarg=1,savepredobj="last", dataunpen=NULL, ord = 1:length(partitions),
-comparelasso=FALSE,optllasso=NULL,compareunpenal=FALSE)
+grridge(highdimdata, response, partitions, unpenal = ~1, offset=NULL, method="exactstable", niter=10, monotone=NULL, optl=NULL, innfold=NULL, fixedfoldsinn=TRUE, selection=FALSE,maxsel=100,stepsel=1,cvlmarg=1,savepredobj="all", dataunpen=NULL, ord = 1:length(partitions), comparelasso=FALSE,optllasso=NULL, cvllasso=T, compareEN=F, compareunpenal=FALSE,trace=FALSE, modus=1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -20,7 +18,7 @@ comparelasso=FALSE,optllasso=NULL,compareunpenal=FALSE)
 Matrix or numerical data frame. Contains the primary data of the study. Columns are samples, rows are variables (features).
 }
   \item{response}{
-Factor, numeric or binary. Response values. The \code{length(response)} should equal \code{ncol(highdimdata)}.
+Factor, numeric, binary or survival. Response values. The number of response values should equal \code{ncol(highdimdata)}.
 }
   \item{partitions}{
 List of lists. Each list component contains a partition of the variables, which is again a list. See details.
@@ -34,7 +32,7 @@ Numeric (vector). Optional offset, either one constant or sample-specific, in wh
 }
 
 \item{method}{
-Character. Equal to \code{"stable"}: the iterative method, \code{"exact"}: the non-iterative, systems-based method, \code{"adaptridge"}:
+Character. Equal to \code{"exactstable"}: the stable iterative, systems-based method, \code{"stable"}: the iterative non-systems-based method, \code{"exact"}: the non-iterative, systems-based method, \code{"adaptridge"}:
 adaptive ridge (not recommended). 
 }
 
@@ -84,14 +82,30 @@ Integer vector. The order in which the partitions in \code{partitions} are used.
 Boolean. If \code{comparelasso=TRUE} the results of lasso regression are included.
 }
 
- \item{optl}{
+ \item{optllasso}{
 Numeric. Value of the global regularization parameter (lambda) in the lasso. If specified, 
 optimization by cross-validation is skipped.
 }
 
-  \item{comparelasso}{
+ \item{cvllasso}{
+Boolean. If \code{cvllasso=TRUE} it returns the cross-validated likelihood for lasso when \code{comparelasso=TRUE}.
+}
+
+  \item{compareEN}{
+Boolean. If \code{comparelasso=TRUE} the results of elastic net regression using GRridge weights are included.
+}
+
+  \item{compareunpenal}{
 Boolean. If \code{compareunpenal=TRUE} the results of regression with unpenalized covariates only are included.
 Only relevant when \code{dataunpenal} is specified. 
+}
+
+\item{trace}{
+Boolean. If \code{trace=TRUE} the results of the cross-validation for parameter (lambda) tuning are shown.
+}
+
+\item{modus}{
+Integer. Please use \code{modus=1}. Only use \code{modus=2} when backward compatibility with versions <= 1.6 is desired. 
 }
 }
 \details{
@@ -122,6 +136,8 @@ A list object containing:
   \item{whichsel}{Indices of selected variables}
   \item{cvlssel}{Trace of cross-validated likelihoods for the number of selected variables}
   \item{reslasso}{Results of the lasso. \code{NULL} when \code{comparelasso=FALSE}}
+  \item{resEN}{Results of the weighted Elastic Net. \code{NULL} when \code{compareEN=FALSE}}
+  \item{model}{Model used for fitting: logistic, linear or survival}
   \item{arguments}{Arguments used to call the function}
 }
 
