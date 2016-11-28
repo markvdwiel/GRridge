@@ -1,0 +1,386 @@
+
+%\VignetteIndexEntry{GRridge}
+%\VignetteDepends{GRridge}
+%\VignetteKeywords{Regression}
+%\VignettePackage{GRridge}
+
+\input{preamble.tex}
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+\setkeys{Gin}{width=0.99\textwidth}
+
+\title{\bf GRridge: Adaptive group-regularized ridge regression by use of co-data}
+
+\author{Mark A. van de Wiel and Putri W. Novianti}
+
+\maketitle
+
+\begin{center}
+Department of Epidemiology \& Biostatistics\\
+VU University Medical Center\\
+Amsterdam, The Netherlands
+\end{center}
+
+\begin{center}
+
+{\tt mark.vdwiel@vumc.nl}
+\end{center}
+
+
+
+\tableofcontents
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section{Overview} 
+
+Predicting binary or continuous response from high-dimensional data is a well-addressed problem nowadays. Many existing methods have been adapted to cope with high-dimensional data, in particular by means of regularization. Adaptive group regularized ridge regression was introduced to improve the predictive performance of logistic ridge regression by incorporating external and/or internal auxiliary information on the features: the co-data. More formally, co-data can be described as any nominal or quantitative feature-specific information, obtained independently of the response variable. Four types of co-data are distinguished: 
+
+\begin{enumerate}
+\item Response-independent summaries in the primary data (e.g. standard deviation).
+\item Feature-specific summaries from an independent study (e.g. p-values). 
+\item Feature groupings from public data bases (e.g. pathways). 
+\end{enumerate}
+
+{\tt GRridge} package implements adaptive group-regularized (survival, linear, logistic) ridge regression by use of co-data. The package includes convenience functions to convert such co-data to the correct input format. In addition, it includes functions for evaluating the predictive performance.
+
+
+{\tt GRridge} package was based on this following publication:
+
+Mark van de Wiel, Tonje Lien, Wina Verlaat, Wessel van Wieringen, Saskia Wilting. (2016). Better prediction by use of co-data: adaptive group-regularized ridge regression. Statistics in Medicine, 35(3), 368-81. \citep{wiel2016better}
+
+\subsection{Elements of the {\tt GRridge} package}
+
+Key elements of the GRridge package are:
+\begin{enumerate}
+\item An automatic function to create a partition of features, namely {\tt CreatePartition} and {\tt matchGeneSets} function for non-overlapping and overlapping groups, respectively. The package also provides a function to regroup a considerably number of overlapping groups by {\tt mergeGroups} function.
+\item Comparison of the performance of GRridge model with, ordinary ridge regression, lasso and non-penalized regression, using the {\tt grridge} function: 
+\begin{itemize}
+\item ridge regression: the function automatically estimated this ridge regression model.
+\item lasso: {\tt comparelasso=TRUE}.
+\item non-penalized regression: {\tt compareunpenal=TRUE}.
+\end{itemize}
+\item The {\tt grridgeCV}  function provides predicted classes and predicted probabilities that are estimated by cross-validation.  
+\item Post-hoc feature selection of X-relevant features. Two features selection approaches are available, namely forward selection ("{\tt selectionForward=TRUE}", "{\tt maxsel=X}" in the {\tt grridge} function) and feature selection via L1-penalization method ("{\tt selectionEN=TRUE}", in the {\tt grridge} function). The forward selection may perform reasonably well when the group-penalties are strong, in particular for multiple partitions. The second feature selection approach, on the other hand, is likely superior when group-penalties are less strong, because it inherits the superior selection properties of the elastic-net in such a setting. As it will perform similar as forward selection selection approach, we strongly suggest to use the group-regularized elastic-net for post-hoc feature selection ("{\tt selectionForward=FALSE}", "{\tt selectionEN=TRUE}").
+\item Evaluation of the performance of classification models is visualized by receiver operating characteristics (ROC) curve ("{\tt roc}" function) and is quantified by area under the curve ("{\tt auc}" function).
+\end{enumerate}
+
+\subsection{Getting started}
+
+%The {\tt GRridge} package is freely available online. We show {\tt GRridge} installation from github
+
+%%%%%% THIS PART WILL BE UPDATED (BIOCONDUCTOR)
+
+%<<echo=TRUE,print=FALSE>>=
+%library(devtools)
+%install_github("markvdwiel/GRridge")
+%@
+
+The GRridge package depends on these following R packages: {\tt penalized} \citep{goeman2010l1}, {\tt survival} (Therneau, 2015) and {\tt Iso} (Turner, 2015).
+
+\newpage
+\section{Example 1: DNA-Methylation data}\label{DNAMeth}
+A cervical cancer study measures DNA methylation level on normal healthy controls (control, n=20) and high-grade precursor lesions (precursor, n=17) tissue biopsies \citep{farkas2013genome}.  A popular platform for measuring methylation is the Infinium HumanMethylation450 BeadChip (Illumina,San Diego, CA, USA), which contains 450,000 probes per individual, where each probe renders a so-called beta-value. The preprocessing process rendered 40,000 methylation probes \citep{wiel2016better}.
+
+Load the GRridge library and its dependencies
+<<echo=TRUE,print=FALSE>>=
+library(GRridge)
+@
+
+
+Load the primary data set 
+<<echo=TRUE,print=FALSE>>=
+data(dataFarkas)
+@
+
+
+It contains these following objects
+
+\begin{itemize}
+\item datcenFarkas: methylation data for cervix samples (arcsine-transformed beta values).
+\item respFarkas: binary response (Normal and Precursor).
+\item CpGannFarkas: annotation of probes according to location (CpG-Island, North-Shelf, South-Shelf, North- Shore, South-Shore, Distant).
+\end{itemize}
+
+We first create a partition based on location of the probes ({\tt CpGannFarkas}). For nominal input (factor), {\tt CreatePartition(vec)} creates a partition of features (probes) with groups according to the levels of {\tt vec}.
+
+
+<<echo=TRUE,print=FALSE>>=
+firstPartition <- CreatePartition(CpGannFarkas)
+@
+
+
+A practical issue when applying penalized regression is the need or 'no need' for standardization of the features. A potential of GRridge method is that it can let the data decide how the variance of features should impact the penalties. More discussion about this issue can be found in \citep{wiel2016better}. A partition based on standard deviation (sd) of each feature is then created. For numeric input it creates a partition according to ranking, here into uniformly-sized groups based on sds. The argument {\tt decreasing=FALSE} implies here that groups of probes with smaller sds may potentially be penalized less when using the monotone argument below in the {\tt grridge} function (which implicitly also happens when standardizing the data).
+
+
+<<echo=TRUE,print=FALSE>>=
+sdsF <- apply(datcenFarkas,1,sd)
+secondPartition <- CreatePartition(sdsF,decreasing=FALSE,
+                                   uniform=TRUE,grsize=5000)
+@
+
+
+Concatenate two partitions into one list
+<<echo=TRUE,print=FALSE>>=
+partitionsFarkas <- list(cpg=firstPartition,sds=secondPartition)
+@
+
+
+A list of monotone functions from the corresponding partition. 
+<<echo=TRUE,print=FALSE>>=
+monotoneFarkas <- c(FALSE,TRUE)
+@
+
+
+{\tt monotoneFarkas} indicates that monotone increasing group-penalties are desired for the 2nd partition (sd-based), and not for the first one.
+
+
+{\tt grridge()} function applies group-regularized ridge to data {\tt datcenFarkas}, response {\tt respFarkas} and probe grouping {\tt partitionFarkas}. It recognizes automatically whether survival, linear or logistic (here) regression should be performed. Here, it saves the prediction objects from ordinary and group-regularized ridge. Includes non-penalized intercept by default. 
+
+
+<<echo=TRUE,print=FALSE, results=hide, eval=FALSE>>=
+grFarkas <- grridge(datcenFarkas, respFarkas, partitionsFarkas, 
+                   optl=5.680087, monotone= monotoneFarkas)
+@
+
+
+The group-penalties from the GRridge model ({\tt grFarkas}) is shown as follow
+<<echo=TRUE,print=FALSE, eval=FALSE>>=
+grFarkas$lambdamults
+@
+
+
+{\tt grridgeCV()} function performs 10-fold cross-validation to assess predictive performances of the predictors saved in the {\tt grFarkas} object. Invokes {\tt grridge()} using the same arguments as used by the above call to {\tt grridge()} to create {\tt grFarkas}. The result is a matrix with 3 columns containing the true response, and the predictions by ordinary and group-regularized logistic ridge.
+
+<<echo=TRUE,print=FALSE, results=hide, eval=FALSE>>=
+grFarkasCV <- grridgeCV(grFarkas, datcenFarkas, 
+                         respFarkas, outerfold=10)
+@
+
+
+The performance of probabilistic classifiers is visualized by ROC curves and is measured by AUC. 
+<<echo=TRUE,print=FALSE, eval=FALSE>>=
+cutoffs <- rev(seq(0,1,by=0.01))
+rocridgeF <- roc(probs=grFarkasCV[,2],
+                 true=grFarkasCV[,1],cutoffs=cutoffs)
+rocgrridgeF <- roc(probs=grFarkasCV[,3],
+                   true=grFarkasCV[,1],cutoffs=cutoffs)
+plot(rocridgeF[1,],rocridgeF[2,],type="l",lty=1,ann=FALSE,col="grey")
+points(rocgrridgeF[1,],rocgrridgeF[2,],type="l",lty=1,col="black")
+legend(0.6,0.3, legend=c("ridge","GRridge"),
+       lty=c(1,1), lwd=c(1,1),col=c("grey","black"))
+
+@
+
+
+\newpage
+\section{Example 2: mRNA sequencing data}\label{mRNAseq}
+Blood platelets extracted from patients with breast cancer (breast, n=40) and colorectal cancer (CRC, n=41) were used to profile their RNA markers for the purpose of early cancer detection \citep{best2015rna}. The raw sequencing data set is publicly available in GEO database (GEO: GSE68086). The raw data was preprocessed, rendering 18,410 transcripts (or features). 
+
+Load the GRridge library and its dependencies
+<<echo=TRUE,print=FALSE>>=
+library(GRridge)
+@
+
+
+Load the primary data set 
+<<echo=TRUE,print=FALSE>>=
+data(dataWurdinger)
+@
+
+
+The object contains
+\begin{itemize}
+\item datWurdingerBC		: A matrix containing preprocessed mRNA sequencing data (quasi-gausian scale,normalized). Columns are samples (81 samples with Breast Cancer and Colorectal Cancer) and rows are features (18410 features). 
+\item respWurdinger	: A factor containing responses for samples with Breast cancer (n=40) and  colorectal cancer (n=41)	
+\item annotationWurdinger	: A list containing ensembleID, geneSymbol, entrezID and chromosome location. 
+\item coDataWurdinger		: A list containing co-data sets from external sources, namely (i) a list of genes that are expressed in platelets; (ii) immunologic signature pathway and; (iii) transcription factor based pathway and a list of cancer somatic genes.
+\end{itemize}
+
+In this second example, we focus on the application of GRridge method by using multiple external co-data, namely (1) immunologic signature pathway (2) transcription factor based pathway (3) platelet expressed genes and (4) genomic annotation based on chromosomal location. The first two co-data are based on the gene set enrichment analysis (GSEA) from the Molecular Signatures Database (MSigDB). We created a list of platelet-expressed genes is based on the joint lists of two studies, i.e. \citep{gnatenko2009transcript}  and \citep{bugert2003messenger}. The last partition was based on chromosomal location taken from biomaRt databases \citep{durinck2009mapping}.
+
+
+Here, we focus on the binary classification case between breast cancer (breast) and colorectal cancer (CRC).
+
+First, the preprocessed primary data set were transformed and standardized
+<<echo=TRUE,print=FALSE>>=
+
+# Transform the data set to the square root scale
+dataSqrtWurdinger <- sqrt(datWurdinger_BC)
+#
+#Standardize the transformed data
+datStdWurdinger <- t(apply(dataSqrtWurdinger,1,
+                           function(x){(x-mean(x))/sd(x)}))
+#
+# A list of gene names in the primary RNAseq data
+genesWurdinger <- annotationWurdinger$geneSymbol
+@
+
+
+
+\subsection{A partition containing overlapping groups}
+We first show an example of GRridge classification model by using overlapping groups, i.e. pathway-based grouping. Transcription factor based pathway was extracted from the MSigDB (Section C3: motif gene sets; subsection: transcription factor targets; file's name: "{\tt c3.tft.v5.0.symbols.gmt}"). The gene sets are based on TRANSFAC version 7.5 database (http://www.gene-regulation.com/). 
+
+
+A partition based on the GSEA object ({\tt TFsym}) is then created. Some features may belong to more than one group. The argument {\tt minlen=25} implies the minimum number of features in a gene set. If {\tt remain=TRUE}, gene sets with less than 25 members are grouped to the "{\tt remainder}" group. "{\tt genesWurdinger}" is an object containing gene names from the mRNA sequencing data set. See {\tt help(matchGeneSets)} for more detail information. The {\tt TFsym} can be downloaded from: https://github.com/markvdwiel/GRridgeCodata/tree/master/Transcription-factor-binding-site-pathway
+
+
+<<echo=TRUE,print=FALSE, eval=FALSE>>=
+gseTF <- matchGeneSets(genesWurdinger,TFsym,minlen=25,remain=TRUE)
+@
+
+
+The output value of the {\tt matchGeneSets} function can be used directly as an input in the {\tt grridge} function ({\tt partitions=gseTF}). There is no need to create a partition via the {\tt CreatePartition} function. A similar approach can be done for other pathways based partition. 
+
+
+
+\subsection{Merge groups in a partition} \label{mergegroups}
+Pathway-based partition often contains a considerable number of gene sets (or groups). There are 615 and 4871 groups in the transcription factor and immunological based pathway, respectively (per July 4, 2016).  Overfitting may be an issue in the GRridge predictive modeling on such a large number of groups. As a solution, a data driven re-grouping based on hierarchical clustering analysis can be applied. The {\tt GRridge} package provides a function to merge groups in a partition, i.e. {\tt mergeGroups}. In this example  the initial gene sets will be re-grouped into 5 groups ({\tt maxGroups=5}). 
+
+
+<<echo=TRUE,print=FALSE, results=hide,eval=FALSE>>=
+gseTF_newGroups <- mergeGroups(highdimdata= datStdWurdinger, 
+                               initGroups=gseTF, maxGroups=5)
+@
+
+
+To extract indices of new groups,
+<<echo=TRUE,print=FALSE, eval=FALSE>>=
+gseTF2 <- gseTF_newGroups$newGroups
+@
+
+
+The {\tt gseTF2} object is a list of the components of which contain the indices of the features belonging to each group. This object is in the same format as the output from the "{\tt CreatePartition}" function. Hence, the result can be used directly as an input in the "{\tt grridge}" function. 
+
+
+To observe members of the new groups,
+<<echo=TRUE,print=FALSE, eval=FALSE>>=
+newClustMembers <- gseTF_newGroups$newGroupMembers
+@
+
+
+
+\subsection{A procedure to select and to order multiple partitions}\label{partitionsSelection}
+Although there is no harm including multiple co-data sets, we have shown in the miRNAseq data that the more co-data used does not guarantee the better predictive performance of a GRridge model. We introduce a procedure to optimize the use of co-data in a GRridge model. A co-data set will be included in the predictive model, if it gives a significant improvement to the model. The contribution of a co-data is evaluated by cross-validation likelihood (cvl) value. The partitions selection procedure is similar with the forward selection in a classical regression model. The {\tt grridge} function gives an option to optimize the use of co-data. This selection reassures each and every set gives additive positive affect to the predictive model.
+
+We then apply the partitions selection procedure on the four available co-data, described as follows
+
+\begin{enumerate}
+\item co-data 1: a partition based on immunologic signature pathway This following object was obtained by the same approach as transcription factor based pathway mentioned in the previous sections. We merged the initial gene sets (groups) into five new groups following the procedure mentioned in section \ref{mergegroups}. 
+<<echo=TRUE,print=FALSE>>=
+immunPathway <- coDataWurdinger$immunologicPathway
+parImmun <- immunPathway$newClust
+@
+\item co-data 2: a partition based on transcription factor based pathway. This following object is the same as the "{\tt gseTF2}" object, described in section \ref{mergegroups}.
+<<echo=TRUE,print=FALSE>>=
+transcriptionFactor <- coDataWurdinger$transcriptionFactor
+parTranscriptFactor <- transcriptionFactor$newClust
+@
+\item co-data 3: a partition based on a list of platelets expressed genes. 
+<<echo=TRUE,print=FALSE, results=hide>>=
+plateletsExprGenes <- coDataWurdinger$plateletgenes
+# Group genes in the primary data based on the list
+# The genes are grouped into
+# either "NormalGenes" or "Non-overlapGenes"
+is <- intersect(plateletsExprGenes,genesWurdinger)
+im <- match(is, genesWurdinger)
+plateletsGenes <- replicate(length(genesWurdinger),"Non-overlapGenes")
+plateletsGenes[im] <- "NormalGenes"
+plateletsGenes <- as.factor(plateletsGenes)
+parPlateletGenes <- CreatePartition(plateletsGenes)
+@
+\item co-data 4: a partition based on chromosomal location. A list of chromosomal location based on {\tt biomaRt} data bases.
+<<echo=TRUE,print=FALSE, results=hide>>=
+ChromosomeWur0 <- as.vector(annotationWurdinger$chromosome)
+ChromosomeWur <- ChromosomeWur0
+idC <- which(ChromosomeWur0=="MT" | ChromosomeWur0=="notBiomart" |
+               ChromosomeWur0=="Un")
+ChromosomeWur[idC] <- "notMapped"
+table(ChromosomeWur)
+parChromosome <- CreatePartition(as.factor(ChromosomeWur))
+@
+\end{enumerate}
+
+
+
+Concatenate all partitions into one list. 
+<<echo=TRUE,print=FALSE>>=
+partitionsWurdinger <- list(immunPathway=parImmun,
+                            transcriptionFactor=parTranscriptFactor,
+                            plateletsGenes=parPlateletGenes,
+                            chromosome=parChromosome)
+@
+
+
+A list of monotone functions from the corresponding partitions,
+<<echo=TRUE,print=FALSE>>=
+monotoneWurdinger <- c(FALSE,FALSE,FALSE,FALSE)
+@
+
+
+Start selecting and ordering partitions. 
+
+<<echo=TRUE,print=FALSE, results=hide,eval=FALSE>>=
+optPartitions <- PartitionsSelection(datStdWurdinger, respWurdinger, 
+                                     partitions=partitionsWurdinger,
+                                     monotoneFunctions=monotoneWurdinger,
+                                     optl=79.74164)
+@
+
+
+The output of the {\tt PartitionsSelection} function is a numeric vector containing the order of the selected partition(s). We may plug-in this object to the {\tt ord} argument in the {\tt grridge} function.To reduce the computational time, we may use the optimum lambda2 to the GRridge predictive modeling, resulted from the optPartitions.
+
+
+As comparison, lasso model is also built ({\tt comparelasso=TRUE}) and post-hoc feature selection via L1 penalization method is performed ({\tt selectionEN=TRUE}) by predetermined the number of selected markers ({\tt maxsel=10}).
+
+<<echo=TRUE,print=FALSE, results=hide, eval=FALSE>>=
+# To reduce the computational time, we may use the optimum lambda2 
+# (global lambda penalty) in the GRridge predictive modeling, 
+# optl=optPartitions$optl
+# GRridge model by incorporating the selected partitions
+partitionsWurdinger_update = partitionsWurdinger[optPartitions$ordPar]
+monotoneWurdinger_update = monotoneWurdinger[optPartitions$ordPar]
+grWurdinger <- grridge(datStdWurdinger,respWurdinger,
+                       partitions=partitionsWurdinger_update, 
+                       monotone= monotoneWurdinger_update, 
+                       innfold = 3,comparelasso=TRUE, 
+                       optl=optPartitions$optl, selectionEN=TRUE, 
+                       maxsel=10)
+@
+
+
+{\tt grWurdinger\$resEN\$whichEN} contains indexes (and the features' name) of the selected features based on the group- weighted elastic net and {\tt grWurdinger\$resEN\$betaEN} has the information of the beta value of the corresponding selected feature. 
+
+
+Asses the performance of the GRridge model by performing 10-fold CV
+<<echo=TRUE,print=FALSE, results=hide, eval=FALSE>>=
+grWurdingerCV <- grridgeCV(grWurdinger, datStdWurdinger, 
+                            respWurdinger, outerfold=10)
+@
+
+
+The performance of probabilistic classifiers is visualized by ROC curves and is measured by AUCs
+<<echo=TRUE,print=FALSE, eval=FALSE>>=
+cutoffs <- rev(seq(0,1,by=0.01))
+rocridge <- roc(probs= grWurdingerCV[,2],
+                true= grWurdingerCV[,1],cutoffs)
+rocGRridge <- roc(probs= grWurdingerCV[,3],
+                  true= grWurdingerCV[,1],cutoffs)
+rocLasso <- roc(probs= grWurdingerCV[,4],
+                true= grWurdingerCV[,1],cutoffs)
+rocGRridgeEN <- roc(probs= grWurdingerCV[,5],
+                    true= grWurdingerCV[,1],cutoffs)
+plot(rocridge[1,],rocridge[2,],type="l",lty=2,ann=FALSE,col="grey")
+points(rocGRridge[1,],rocGRridge[2,],type="l",lty=1,col="black")
+points(rocLasso[1,],rocLasso[2,],type="l",lty=1,col="blue")
+points(rocGRridgeEN[1,],rocGRridgeEN[2,],type="l",lty=1,col="green")
+legend(0.6,0.35, legend=c("ridge","GRridge", "lasso","GRridge+varsel"),
+       lty=c(1,1), lwd=c(1,1),col=c("grey","black","blue","green"))
+@
+
+\newpage
+\bibliographystyle{apalike}
+\bibliography{GRridge}
+\end{document}
