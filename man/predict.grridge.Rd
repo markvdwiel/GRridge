@@ -70,26 +70,25 @@ Examples: \code{\link{grridge}}.
 
 
 \examples{
-data(dataFarkas)
+#data(dataFarkas)
 
-firstPartition <- CreatePartition(CpGannFarkas)
+#firstPartition <- CreatePartition(CpGannFarkas)
 
-sdsF <- apply(datcenFarkas,1,sd)
-secondPartition <- CreatePartition(sdsF,decreasing=FALSE, uniform=TRUE, grsize=5000)
+#sdsF <- apply(datcenFarkas,1,sd)
+#secondPartition <- CreatePartition(sdsF,decreasing=FALSE, uniform=TRUE, grsize=5000)
 
-# Concatenate two partitions
-partitionsFarkas <- list(cpg=firstPartition, sds=secondPartition)
+## Concatenate two partitions
+#partitionsFarkas <- list(cpg=firstPartition, sds=secondPartition)
 
-# A list of monotone functions from the corresponding partition
-monotoneFarkas <- c(FALSE,TRUE)
+## A list of monotone functions from the corresponding partition
+#monotoneFarkas <- c(FALSE,TRUE)
 
-grFarkas <- grridge(datcenFarkas,respFarkas,optl=5.680087,
-                    partitionsFarkas,monotone=monotoneFarkas)
+#grFarkas <- grridge(datcenFarkas,respFarkas,optl=5.680087,
+#                    partitionsFarkas,monotone=monotoneFarkas)
 
-# Prediction of the grridge model to the training samples
-cutoffs <- rev(seq(0,1,by=0.1))
-fakenew <- datcenFarkas
-yhat <- predict.grridge(grFarkas,fakenew)
-
+## Prediction of the grridge model to the training samples
+#cutoffs <- rev(seq(0,1,by=0.1))
+#fakenew <- datcenFarkas
+#yhat <- predict.grridge(grFarkas,fakenew)
 }
 

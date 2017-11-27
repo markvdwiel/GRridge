@@ -19,8 +19,8 @@ functions for evaluating the predictive performance.
 \tabular{ll}{
 Package: \tab GRridge\cr
 Type: \tab Package\cr
-Version: \tab 0.99.1\cr
-Date: \tab 2015-05-12\cr
+Version: \tab 0.99.24\cr
+Date: \tab 2017-11-04\cr
 License: \tab GPL \cr
 }
 
@@ -29,9 +29,11 @@ Main functions in the GRridge package are:
  \code{auc}: Computes Area-under-the-ROC-curve \cr
  \code{CreatePartition}: Creates a partition (groups) of variables \cr
  \code{dataFarkas}: Large data set plus external information \cr
- \code{dataVerlaat}: Data plus external information \cr
- \code{grridge}: Group-regularized (logistic) ridge regression \cr
- \code{grridge.cv}: Cross-validated predictions for a \code{grridge} (logistic) regression. \cr
+ \code{dataVerlaat}: Methylation data plus external information \cr
+ \code{dataWurdinger}: RNAseq data plus external information \cr
+ \code{simlinsmall}: Simulated data for linear regression \cr
+ \code{grridge}: Group-regularized (logistic, survival) ridge regression \cr
+ \code{grridgeCV}: Cross-validated predictions for a \code{grridge} (logistic, survival) regression. \cr
  \code{matchGeneSets}: Creates a grouping of variables (genes) from gene sets \cr
  \code{mergeGroups}: Merge groups in a partition \cr
  \code{PartitionsSelection}: Co-data selection in a Group-regularized ridge regression model \cr
@@ -41,12 +43,16 @@ Main functions in the GRridge package are:
 }
 
 \author{
-Mark A. van de Wiel (mark.vdwiel@vumc.nl)
+Mark A. van de Wiel (mark.vdwiel@vumc.nl), Putri Novianti (p.novianti@vumc.nl)
 }
 \references{
 Mark van de Wiel, Tonje Lien, Wina Verlaat, Wessel van Wieringen, Saskia Wilting. (2016). 
 Better prediction by use of co-data: adaptive group-regularized ridge regression.
 Statistics in Medicine, 35(3), 368-81.
+ 
+Novianti PW, Snoek B, Wilting SM, van de Wiel MA (2017). 
+Better diagnostic signatures from RNAseq data through use of auxiliary co-data. 
+Bioinformatics, 33, 1572-1574.
 }
 
 \keyword{ package }

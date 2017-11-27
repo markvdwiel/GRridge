@@ -1,11 +1,56 @@
 grridge <- function(highdimdata, response, partitions, unpenal = ~1, 
                     offset=NULL, method="exactstable",
                     niter=10, monotone=NULL, optl=NULL, innfold=NULL, 
-                    fixedfoldsinn=TRUE, selectionForward=FALSE,
-                    maxsel=100,selectionEN=FALSE,stepsel=1,cvlmarg=1,
+                    fixedfoldsinn=TRUE, maxsel=100,selectionEN=FALSE,cvlmarg=1,
                     savepredobj="all", dataunpen=NULL, ord = 1:length(partitions),
                     comparelasso=FALSE,optllasso=NULL,cvllasso=TRUE,
-                    compareEN=FALSE,compareunpenal=FALSE,trace=FALSE,modus=1){#
+                    compareunpenal=FALSE,trace=FALSE,modus=1,
+                    EBlambda=FALSE,standardizeX = TRUE){#
+  
+  if(class(response) =="factor") {
+    nlevel <- length(levels(response))
+    if(nlevel != 2){
+      print("Response is not binary, so not suitable for two-class classification.")
+      return(NULL)
+    } else {
+      model = "logistic"
+      print("Binary response, executing logistic ridge regression")
+      lev <- levels(response)
+      print(paste("Predicting probability on factor level",lev[2]))
+    }} else {
+      if(class(response) == "numeric" | class(response)=="integer"){
+        valresp <- sort(unique(response)) 
+        if(length(valresp)==2 & valresp[1]==0 & valresp[2]==1) {
+          model = "logistic"
+          print("Binary response, executing logistic ridge regression")
+        } else {
+          model = "linear"
+          print("Numeric continuous response, executing linear ridge regression")
+          return(.grridgelin(highdimdata=highdimdata, response=response,partitions= partitions, unpenal=unpenal,
+                             offset=offset, method=method, niter=niter, monotone=monotone, optl=optl, innfold=innfold, 
+                             fixedfoldsinn=fixedfoldsinn, maxsel=maxsel,selectionEN=selectionEN,cvlmarg=cvlmarg,
+                             savepredobj=savepredobj, dataunpen=dataunpen, ord = ord,
+                             comparelasso=comparelasso,optllasso=optllasso,cvllasso=cvllasso,
+                             compareunpenal=compareunpenal,trace=trace,modus=modus,
+                             EBlambda=EBlambda,standardizeX = standardizeX))
+        }
+      } else {
+        if(class(response) == "Surv"){
+          model="survival"
+          print("Survival response, executing cox ridge regression")
+        } else {
+          print("Non-valid response. Should be binary, numeric or survival.")
+          return(NULL)
+        }
+      }
+    }
+  
+  if(standardizeX) {
+    print("Covariates are standardized")
+    highdimdata <- (highdimdata-apply(highdimdata,1,mean))/apply(highdimdata,1,sd)
+  }
+  nsam <- ncol(highdimdata)
+  
 
     if(method=="adaptridge" | method== "exact") niter <- 1
   
@@ -60,11 +105,11 @@ grridge <- function(highdimdata, response, partitions, unpenal = ~1,
   
   arguments <- list(partitions=partitions,unpenal=unpenal, offset=offset, method=method, 
                     niter=niter, monotone=monotone, optl=optl, innfold=innfold,
-                    fixedfoldsinn=fixedfoldsinn,selectionForward=selectionForward,
-                    selectionEN=selectionEN,maxsel=maxsel,stepsel=stepsel, 
+                    fixedfoldsinn=fixedfoldsinn,
+                    selectionEN=selectionEN,maxsel=maxsel,
                     cvlmarg=cvlmarg, dataunpen=dataunpen,savepredobj=savepredobj, ord=ord, 
-                    comparelasso=comparelasso, optllasso=optllasso, compareEN=compareEN, 
-                    compareunpenal=compareunpenal, modus=modus)
+                    comparelasso=comparelasso, optllasso=optllasso, 
+                    compareunpenal=compareunpenal, modus=modus,EBlambda=EBlambda,standardizeX=standardizeX)
   
   
   if(nr > 10000 & is.null(innfold)) print("NOTE: consider setting innfold=10 to save computing time")
@@ -76,41 +121,11 @@ grridge <- function(highdimdata, response, partitions, unpenal = ~1,
   
   nmp <- c("NoGroups","GroupRegul")
   nmpweight <- nmp #to be used later
-  if(selectionForward) nmp <- c(nmp,"ForwSel") 
   if(comparelasso) nmp <- c(nmp,"lasso") 
-  if(compareEN) nmp <- c(nmp,"EN")
+  if(selectionEN) nmp <- c(nmp,"EN")
   if(compareunpenal) nmp <- c(nmp,"modelunpen")
   
-  if(class(response) =="factor") {
-    nlevel <- length(levels(response))
-    if(nlevel != 2){
-      print("Response is not binary, so not suitable for two-class classification.")
-      return(NULL)
-    } else {
-      model = "logistic"
-      print("Binary response, executing logistic ridge regression")
-      lev <- levels(response)
-      print(paste("Predicting probability on factor level",lev[2]))
-    }} else {
-      if(class(response) == "numeric" | class(response)=="integer"){
-        valresp <- sort(unique(response)) 
-        if(length(valresp)==2 & valresp[1]==0 & valresp[2]==1) {
-          model = "logistic"
-          print("Binary response, executing logistic ridge regression")
-        } else {
-          model = "linear"
-          print("Numeric continuous response, executing linear ridge regression")
-        }
-      } else {
-        if(class(response) == "Surv"){
-          model="survival"
-          print("Survival response, executing cox ridge regression")
-        } else {
-          print("Non-valid response. Should be binary, numeric or survival.")
-          return(NULL)
-        }
-      }
-    }
+  
   
   if((unpenal != ~0) & (unpenal != ~1)) {
     if(is.null(dataunpen)) {print("If unpenal contains variables, data of 
@@ -156,7 +171,7 @@ grridge <- function(highdimdata, response, partitions, unpenal = ~1,
   XM0 <- t(highdimdata)
   response0 <- response
   
-  if(!selectionForward) cvlnstot <- rep(0,(nclass+1)) else cvlnstot <- rep(0,(nclass+2))
+  cvlnstot <- rep(0,(nclass+1)) 
   allpreds <- c()
   whsam <- 1:nsam
   responsemin <- response0
@@ -518,78 +533,76 @@ newbeta <- oldbeta/sqrt(lambs)
 time2 <- proc.time()-pmt
 print(paste("Computation time for adaptive weigthing:",time2[3]))
 
-if(selectionForward){
-print("Start posthoc variable selection")
-pmt <- proc.time()
-ord <- order(abs(newbeta),decreasing=TRUE)
-sequ <- seq(0,maxsel,by=stepsel)
-cvlsels <- c()
-for(nsel in sequ){
-whsel <- ord[1:nsel]
-datwsel <- XMw0[,whsel]
 
-pensel <- penalized(responsemin,datwsel,lambda2=optl, unpenalized=nopen,data=datapred,trace=FALSE)
-optsel <- cvl(responsemin,datwsel,fold=nf,lambda2=optl,unpenalized=nopen,data=datapred, trace=trace)
-cvlsel <- optsel$cvl
-cvlsels <- c(cvlsels,cvlsel)
-}
-whbest <- which.max(cvlsels)
-cvmax <- cvlsels[whbest]
-nsel2 <- sequ[(which((cvlsels - cvmax) >= cvlmarg/100*(cvmax)))[1]]
-whsel2 <- ord[1:nsel2]
-whichsel <- whsel2
-betassel <- newbeta[whsel2]
-datwsel2 <- XMw0[,whsel2]
-pensel2 <- penalized(responsemin,datwsel2,lambda2=optl,unpenalized=nopen,data=datapred)
-optsel2 <- cvl(responsemin,datwsel2,fold=nf,lambda2=optl,unpenalized=nopen,data=datapred, trace=trace)
-cvlsel2 <- optsel2$cvl
-if(model=="survival"){
-  predsel <- predict(pensel2,penalized=XMw0[,whsel2,drop=FALSE],unpenalized=nopen,data=datapred)
-} else {
-  predsel <- predict(pensel2,penalized=XMw0[,whsel2,drop=FALSE],unpenalized=nopen,data=datapred)[1:nsam]
-}
-
-allpreds <- cbind(allpreds,predsel)
-predobj <- c(predobj,pensel2)
-cvlnssam <- c(cvlnssam,cvlsel2)
-print(paste("Number of selected markers by forward selection:",nsel2))
-time3 <- proc.time()-pmt
-print(paste("Computation time for feature selection by forward selection:",time3[3]))
-}
-if(selectionForward) cvlssel <- data.frame(nsel=sequ,cvl=cvlsels) else cvlssel <- NULL
 
 cvlnstot <- cvlnssam
 reslasso <- NULL
+mm <- NULL
+# if(model=="survival" & comparelasso){
+# print("Comparison with Cox-lasso is not yet supported")
+# comparelasso <- arguments$comparelasso <-FALSE
+# }+
+
 if(comparelasso){
-print("Starting lasso")
-    if(is.null(optllasso)){
-    print("Finding lambda for lasso regression")
-    opt <- optL1(response, penalized = t(highdimdata),fold=nf,unpenalized=nopen,data=datapred,trace=trace)
-    print(opt$cv)
-    optllasso <- opt$lambda
-    print(paste("lambda1",optllasso))
-    arguments$optllasso <- optllasso
-    cvllasso <- opt$cv
+  if(model == "logistic") fam <- "binomial"
+  if(model == "linear") fam <- "gaussian"
+  if(model == "survival") fam <- "cox"
+  
+  interc <- TRUE
+  if(unpenal == ~0 | fam=="cox") interc <- FALSE
+  
+  if((is.null(dataunpen)) | (unpenal == ~0) | (unpenal == ~1)) {
+    X0 <- t(highdimdata)
+    pf <- rep(1,nr)
+    nunpen <- 0
+  } else  {
+    mm <- model.matrix(unpenal,dataunpen)
+    if(prod(mm[,1]==rep(1,nsam))==1) {
+      interc <- TRUE
+      mm <- mm[,-1,drop=FALSE]
     } else {
-    cvliklasso <- if(cvllasso) try(cvl(response,penalized = t(highdimdata), lambda1 = optllasso,
-                                       fold=nf,unpenalized=nopen,data=datapred, trace=trace))
-    if(class(cvliklasso) == "try-error" | !cvllasso) cvllasso <- NA else cvllasso <- cvliklasso$cvl 
-        }
-cvlnstot <- c(cvlnstot,cvllasso)
-penlasso <- penalized(response, penalized = t(highdimdata), lambda1 = optllasso, 
-                      unpenalized=nopen,data=cbind(XM0,datapred))
-whichlasso <- which(penlasso@penalized != 0)
-betaslasso <- penlasso@penalized[whichlasso]
-predobj <- c(predobj,penlasso)
-reslasso <- list(cvllasso=cvllasso,whichlasso=whichlasso,betaslasso=betaslasso)
+      interc <- FALSE
+    }
+    nunpen <- ncol(mm)
+    pf <- c(rep(1,nr),rep(0,nunpen))
+  }
+  X0 <- cbind(t(highdimdata),mm) 
+  if(is.null(offset)) offset <- rep(0,nsam)
+  print("Starting lasso by glmnet")
+  if(is.null(optllasso)){
+    print("Finding lambda for lasso regression")
+    if(fixedfoldsinn) set.seed(346477)
+    #alpha=1 implies lasso  
+    opt <- cv.glmnet(x=X0,y=response,offset=offset,foldid=nf,penalty.factor=pf,alpha=1,family=fam,
+                     intercept=interc) 
+    optllasso <- opt$lambda.min
+    whmin <- which(opt$lambda==optllasso)
+    print(paste("lambda1 (multiplied by N):",optllasso*nsam))
+    arguments$optllasso <- optllasso
+    cvliklasso <- opt$cvm[whmin]
+  } else {
+    cvliklasso0 <- if(cvllasso) try(cv.glmnet(x=X0,y=response,offset=offset,foldid=nf,lambda=c(optllasso,optllasso/2),
+                                              penalty.factor=pf,alpha=1,family=fam,intercept=interc))
+    if(class(cvliklasso0) == "try-error" | !cvllasso) cvliklasso <- NA else cvliklasso <- cvliklasso0$cvm[1]
+  }
+  cvlnstot <- c(cvlnstot,cvelasso=cvliklasso)
+  penlasso <- glmnet(x=X0,y=response,offset=offset,nlambda=1,lambda=optllasso,penalty.factor=pf,alpha=1,family=fam,
+                     intercept=interc,standardize=FALSE)
+  betaspenalizedlasso <- penlasso$beta[1:nr]  
+  whichlasso <- which(betaspenalizedlasso != 0)
+  betaslasso <- betaspenalizedlasso[whichlasso]
+  predobj <- c(predobj,list(penlasso))
+  reslasso <- list(cvllasso=cvliklasso,whichlasso=whichlasso,betaslasso=betaslasso)
+  print(paste("lasso uses",length(whichlasso),"penalized variables"))
 }
 
 resEN <- NULL 
+#one cannot select more than the nr of variables
+maxsel2 <- min(maxsel,nr)
 if(selectionEN){
+print("Variable selection by elastic net started...")  
   
-  if(selectionForward) maxsel <- length(whsel2)
-  
-  fsel <- function(lam1,maxselec=maxsel,lam2){
+  fsel <- function(lam1,maxselec=maxsel2,lam2){
     if(lam1==0) return(nfeat-maxselec) else {
       penselEN <- penalized(responsemin,XMw0,lambda1=lam1,lambda2=lam2, 
                             unpenalized=nopen,data=datapred,trace=FALSE,maxiter=100)
@@ -641,7 +654,8 @@ predobj <- predobj[length(predobj)]
 almvecall <- matrix(lmvecall,ncol=1)
 }
 if(savepredobj=="none") predobj <- NULL
-return(list(true=response,cvls = cvlnstot,lambdamults = lambdas, optl=optl, lambdamultvec = almvecall, 
-            predobj=predobj,betas=newbeta, whichsel = whichsel,cvlssel = cvlssel,reslasso=reslasso, 
+cat("\n")
+return(list(true=response,cvfit = cvlnstot,lambdamults = lambdas, optl=optl, lambdamultvec = almvecall, 
+            predobj=predobj,betas=newbeta, reslasso=reslasso, 
             resEN = resEN, model=model, arguments=arguments,allpreds=allpreds))
 }

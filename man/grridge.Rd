@@ -4,19 +4,17 @@
 Group-regularized (logistic) ridge regression 
 }
 \description{
-This function implements adaptive group-regularized (logistic) ridge regression by use of co-data. It uses co-data to improve 
-predictions of binary and continuous response from high-dimension (e.g. genomics) data. Here, co-data is 
-auxiliary information on variables (e.g. genes), such as annotation or p-values from other studies.
+This function implements adaptive group-regularized (logistic) ridge regression by use of co-data. It uses co-data to improve predictions of binary and continuous response from high-dimension (e.g. genomics) data. Here, co-data is auxiliary information on variables (e.g. genes), such as annotation or p-values from other studies.
 }
 \usage{
-grridge(highdimdata, response, partitions, unpenal = ~1, offset=NULL, 
-        method="exactstable", niter=10, monotone=NULL,
-        optl=NULL, innfold=NULL, fixedfoldsinn=TRUE, 
-        selectionForward=FALSE, maxsel=100, selectionEN=FALSE,
-        stepsel=1,cvlmarg=1,savepredobj="all", dataunpen=NULL, 
-        ord = 1:length(partitions), comparelasso=FALSE,optllasso=NULL,
-        cvllasso=TRUE, compareEN=FALSE, compareunpenal=FALSE,
-        trace=FALSE, modus=1)
+grridge(highdimdata, response, partitions, unpenal = ~1, 
+        offset=NULL, method="exactstable",
+        niter=10, monotone=NULL, optl=NULL, innfold=NULL, 
+        fixedfoldsinn=TRUE, maxsel=100,selectionEN=FALSE,cvlmarg=1,
+        savepredobj="all", dataunpen=NULL, ord = 1:length(partitions),
+        comparelasso=FALSE,optllasso=NULL,cvllasso=TRUE,
+        compareunpenal=FALSE,trace=FALSE,modus=1,
+        EBlambda=FALSE,standardizeX = TRUE)       
 }
 \arguments{
   \item{highdimdata}{
@@ -60,17 +58,11 @@ Defaults too LOOCV.
 Boolean. Use fixed folds for inner cross-validation? 
 }
 
-  \item{selectionForward}{
-Boolean. If \code{selectionForward=TRUE} post-hoc forward variable selection is performed.
-}
   \item{selectionEN}{
 Boolean. If \code{selectionEN=TRUE} then post-hoc variable selection by weighted elastic net is performed.
 }
   \item{maxsel}{
 Integer. The maximum number of selected variables.
-}
-  \item{stepsel}{
-Integer. Step-size for variable selection.
 }
   \item{cvlmarg}{
 Numeric. Maximum margin (in percentage) that the cross-validated likelihood of the model with selected variables may deviate from the optimum one.
@@ -99,10 +91,6 @@ optimization by cross-validation is skipped.
 Boolean. If \code{cvllasso=TRUE} it returns the cross-validated likelihood for lasso when \code{comparelasso=TRUE}.
 }
 
-\item{compareEN}{
-   Boolean. If \code{compareEN=TRUE}, the results of feature selection based on L1-penalization is included. 
- }
-
   \item{compareunpenal}{
 Boolean. If \code{compareunpenal=TRUE} the results of regression with unpenalized covariates only are included.
 Only relevant when \code{dataunpenal} is specified. 
@@ -113,48 +101,53 @@ Boolean. If \code{trace=TRUE} the results of the cross-validation for parameter 
 }
 
 \item{modus}{
-Integer. Please use \code{modus=1}. Only use \code{modus=2} when backward compatibility with versions <= 1.6 is desired. 
+Integer. Please use \code{modus=1}. Only use \code{modus=2} when backward compatibility with versions <= 1.6 is desired.
 }
+
+\item{EBlambda}{
+Boolean. If \code{EBlambda=TRUE} global lambda is estimated by empirical Bayes (currently only available for linear model).
+}
+\item{standardizeX}{
+Boolean. If \code{standardizeX=TRUE} variables in X are standardized prior to the analysis.
+}
+
 }
 \details{
 About \code{partitions}: this is a list of partitions or one partition represented as a simple list.  
 Each partition is a (named) list that contains the indices (row numbers) of the variables in the concerning group. Such a partition is usually created by 
 \code{\link{CreatePartition}}. 
-
 About \code{savepredobj}: use \code{savepredobj="all"} if you want to compare performances of the various predictors (e.g. ordinary ridge, 
 group-regularized ridge, group-regularized ridge + selection) using \code{\link{grridgeCV}}.
 About \code{monotone}: We recommend to set the jth component of \code{monotone} to \code{TRUE} when the jth partition 
-is based on external p-values, test statistics or regression coeeficients. This increases stability of the predictions. 
-About \code{selectionForward} and \code{selectionEN}: the first refers to forward selection, the latter to elastic net (EN) selection. 
-If both are TRUE, the EN selection will select the same number of variables as forward selection, which can select fewer than \code{maxsel} variables. If \code{selectionForward=FALSE} and
-\code{selectionEN=TRUE}, EN selection will select exactly \code{maxsel} variables. EN selection is recommended. Note that EN is only used for selection; 
+is based on external p-values, test statistics or regression coeeficients. This increases stability of the predictions. If \code{selectionEN=TRUE}, EN selection will select exactly \code{maxsel} variables. Note that EN is only used for selection; 
 the final predictive model is a group-ridge model fitted only on the selected variables using the penalties estimated by GRridge. 
 About \code{cvlmarg}: We recommended to use values between 0 and 2. A larger value will generally result in fewer selected variables by forward selection. 
-About \code{innfold}: for large data sets considerable computing time may be saved when setting \code{innfold=10} instead of default 
-leave-one-out-cross-validation (LOOCV). About \code{method}: \code{"exactstable"} is recommended. If the number of variables is
-not very large, say \code{<2000}, the faster non-iterative \code{"exact"} method can be used as an alternative. 
+About \code{innfold}: for large data sets considerable computing time may be saved when setting \code{innfold=10} instead of default leave-one-out-cross-validation (LOOCV). About \code{method}: \code{"exactstable"} is recommended. If the number of variables is not very large, say \code{<2000}, the faster non-iterative \code{"exact"} method can be used as an alternative. \code{grridge} uses the \code{penalized} package to fit logistic and survival ridge models; \code{glmnet} is used for linear response and for fitting lasso when \code{comparelasso=TRUE}. 
 }
 \value{
 A list object containing:
  \item{true}{True values of the response}
-  \item{cvls}{Cross-validated likelihoods from the iterations}
+  \item{cvfit}{Measure of fit. Cross-validated likelihoods from the iterations for linear and survival model; minus CV error for linear model}
   \item{lambdamults}{List of lists object containing the penalty multipliers per group per partition}
   \item{optl}{Global penalty parameter lambda}
   \item{lambdamultvec}{Vector with penalty multipliers per variable}
   \item{predobj}{List of prediction objects}
   \item{betas}{Estimated regression coefficients}
-  \item{whichsel}{Indices of selected variables}
-  \item{cvlssel}{Trace of cross-validated likelihoods for the number of selected variables}
   \item{reslasso}{Results of the lasso. \code{NULL} when \code{comparelasso=FALSE}}
   \item{resEN}{Results of the Elastic Net selection. \code{NULL} when \code{compareEN=FALSE}}
   \item{model}{Model used for fitting: logistic, linear or survival}
   \item{arguments}{Arguments used to call the function}
+  \item{allpreds}{Predictions on the same data}
 }
 
 \references{
 Mark van de Wiel, Tonje Lien, Wina Verlaat, Wessel van Wieringen, Saskia Wilting. (2016). 
 Better prediction by use of co-data: adaptive group-regularized ridge regression.
 Statistics in Medicine, 35(3), 368-81.
+
+Novianti PW, Snoek B, Wilting SM, van de Wiel MA (2017). 
+Better diagnostic signatures from RNAseq data through use of auxiliary co-data. 
+Bioinformatics, 33, 1572-1574.
 }
 
 \author{
