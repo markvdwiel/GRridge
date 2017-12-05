@@ -54,7 +54,7 @@ dataSqrtWurdinger <- sqrt(datWurdinger_BC)
 datStdWurdinger <- t(apply(dataSqrtWurdinger,1,function(x){(x-mean(x))/sd(x)}))
 
 # A list of gene names in the primary RNAseq data
-genesWurdinger <- annotationWurdinger$geneSymbol
+genesWurdinger <- as.character(annotationWurdinger$geneSymbol)
 
 # We  show an example of GRridge classification model by using overlapping groups,
 # i.e. pathway-based grouping. Transcription factor based pathway was extracted from 

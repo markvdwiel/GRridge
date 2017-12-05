@@ -1,7 +1,6 @@
 matchGeneSets <- function(GeneIds,GeneSets,minlen=25,remain=TRUE){
   sets <- lapply(GeneSets, function(gs) {
-    gs2 <- gs@geneIds
-    ma <- match(gs2, GeneIds)
+    ma <- match(gs, GeneIds)
     ma <- ma[!is.na(ma)]
     el <- length(ma)
     if (el < minlen) 

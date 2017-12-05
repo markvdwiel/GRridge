@@ -73,8 +73,7 @@ firstPartition <- CreatePartition(CpGannFarkas)
 # worth to try:
 # grFarkas <- grridge(datcenFarkas,respFarkas,firstPartition,monotone=FALSE)
 # grFarkas$optl
-grFarkas <- grridge(datcenFarkas,respFarkas, optl=5.680087,
-                      firstPartition,monotone=FALSE)
+# grFarkas <- grridge(datcenFarkas,respFarkas, optl=5.680087, firstPartition,monotone=FALSE)
 
 ###
 # grFarkasCV <- grridgeCV(grFarkas,datcenFarkas,respFarkas,outerfold=10)

@@ -59,25 +59,16 @@ Group-regularized ridge regression: \code{\link{grridge}}.
 # datStdWurdinger <- t(apply(dataSqrtWurdinger,1,function(x){(x-mean(x))/sd(x)}))
 # 
 # # A list of gene names in the primary RNAseq data
-# genesWurdinger <- annotationWurdinger$geneSymbol
+# genesWurdinger <- as.character(annotationWurdinger$geneSymbol)
 # 
 # # co-data 1: a partition based on immunologic signature pathway
 # # The initial gene sets (groups) are merged into five new groups, using the "mergeGroups" function
 # immunPathway <- coDataWurdinger$immunologicPathway
 # parImmun <- immunPathway$newClust
-# 
-# # co-data 2: a partition based on chromosomal location
-# ChromosomeWur0 <- as.vector(annotationWurdinger$chromosome)
-# ChromosomeWur <- ChromosomeWur0
-# idC <- which(ChromosomeWur0=="MT" | ChromosomeWur0=="notBiomart" | ChromosomeWur0=="Un")
-# ChromosomeWur[idC] <- "notMapped"
-# parChromosome <- CreatePartition(as.factor(ChromosomeWur))
-# 
-# # co-data 3: a partition based on a list of platelets expressed genes
+ 
+# # co-data 2: a partition based on a list of platelets expressed genes
 # plateletsExprGenes <- coDataWurdinger$plateletgenes
-# # Group genes in the primary data based on the list
-# # The genes are grouped into
-# # either "NormalGenes" or "Non-overlapGenes"
+# # The genes are grouped into either "NormalGenes" or "Non-overlapGenes"
 # is <- intersect(plateletsExprGenes,genesWurdinger)
 # im <- match(is, genesWurdinger)
 # plateletsGenes <- replicate(length(genesWurdinger),"Non-overlapGenes")
@@ -85,7 +76,7 @@ Group-regularized ridge regression: \code{\link{grridge}}.
 # plateletsGenes <- as.factor(plateletsGenes)
 # parPlateletGenes <- CreatePartition(plateletsGenes)
 # 
-# # co-data 4: a partition based on chromosomal location. 
+# # co-data 3: a partition based on chromosomal location. 
 # # A list of chromosomal location based on {\tt biomaRt} data bases.
 # ChromosomeWur0 <- as.vector(annotationWurdinger$chromosome)
 # ChromosomeWur <- ChromosomeWur0
@@ -96,12 +87,11 @@ Group-regularized ridge regression: \code{\link{grridge}}.
 # parChromosome <- CreatePartition(as.factor(ChromosomeWur))
 # 
 # partitionsWurdinger <- list(immunPathway=parImmun,
-#                             transcriptionFactor=parTranscriptFactor,
 #                             plateletsGenes=parPlateletGenes,
 #                             chromosome=parChromosome)
 # 
 # #A list of monotone functions from the corresponding partitions
-# monotoneWurdinger <- c(FALSE,FALSE,FALSE,FALSE)
+# monotoneWurdinger <- c(FALSE,FALSE,FALSE)
 # 
 # # Start ordering and selecting partitions
 # optPartitions <- PartitionsSelection(datStdWurdinger, respWurdinger, 

@@ -46,7 +46,7 @@ datStdWurdinger <- t(apply(dataSqrtWurdinger,1,
                            function(x){(x-mean(x))/sd(x)}))
 #
 # A list of gene names in the primary RNAseq data
-genesWurdinger <- annotationWurdinger$geneSymbol
+genesWurdinger <- as.character(annotationWurdinger$geneSymbol)
 
 }
 

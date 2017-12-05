@@ -1,4 +1,4 @@
-import(stats,survival,penalized, Iso, GSEABase, BiocGenerics, Biobase, annotate,methods,graph)
+import(stats,survival,penalized, Iso, methods,graph, glmnet, mvtnorm)
 importFrom("stats","cutree", "dist", "formula", "glm", "cov",
              "hclust", "model.matrix", "optim", "rnorm", "uniroot")
 exportPattern("^[[:alpha:]]+")

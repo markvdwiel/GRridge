@@ -78,7 +78,7 @@ dataSqrtWurdinger <- sqrt(datWurdinger_BC)
 datStdWurdinger <- t(apply(dataSqrtWurdinger,1,function(x){(x-mean(x))/sd(x)}))
 
 # A list of gene names in the primary RNAseq data
-genesWurdinger <- annotationWurdinger$geneSymbol
+genesWurdinger <- as.character(annotationWurdinger$geneSymbol)
 
 ## Creating partitions based on pathways information (e.g. GSEA object)
 ## Some variables may belong to more than one groups (gene sets).
