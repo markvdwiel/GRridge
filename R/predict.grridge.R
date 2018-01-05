@@ -2,8 +2,11 @@ predict.grridge <- function (object, datanew, printpred = FALSE,
                              dataunpennew=NULL,responsetest=NULL,
                              recalibrate=FALSE,...) 
 {
+#object=grMaarten1part;datanew=mirnormcen_resp;dataunpennew=datfr;responsetest=NULL;recalibrate=FALSE
   grr <- object
   model <- grr$model
+  
+  
   
   if (!(is.null(grr$arguments$dataunpen)) & recalibrate == 
         TRUE) {
@@ -26,6 +29,10 @@ predict.grridge <- function (object, datanew, printpred = FALSE,
     datanew <- data.frame(datanew)
   npred <- ncol(datanew)
   Xsam <- t(datanew)
+  
+  optllasso <- grr$arguments$optllasso
+  if (length(offsarg) > 1) offsout <- offsarg[samout] else offsout <- rep(0,npred)
+  
   if (is.null(dataunpennew)) {
     dataunpensam <- data.frame(fake = rep(NA, npred))} else{
       if (class(dataunpennew) != "data.frame") {dataunpensam <- data.frame(dataunpennew)}else {
@@ -65,10 +72,20 @@ predict.grridge <- function (object, datanew, printpred = FALSE,
                                ")", sep = ""))
     }
   }
+  
+  #preparing for glmnet (lasso)
+  if((is.null(dataunpennew)) | (unpenal == ~0) | (unpenal == ~1)){
+    mmout <- NULL
+  } else  {
+    mmout <- model.matrix(unpenal,dataunpennew)
+    if(prod(mmout[,1]==rep(1,npred))==1) {
+      mmout <- mmout[,-1,drop=FALSE]
+    }
+  }
+  
   nmp <- names(penobj)
-  if (arg$selectionForward || arg$compareEN || arg$selectionEN) {npreds <- length(penobj) - 1}else {npreds <- length(penobj)}
-  if((arg$selectionForward)&&(arg$compareEN) || (arg$selectionForward)&&(arg$selectionEN)){npreds <- length(penobj) - 2}
-  if (arg$comparelasso)
+  if (arg$selectionEN) {npreds <- length(penobj) - 1} else {npreds <- length(penobj)}
+   if (arg$comparelasso)
     npreds <- npreds - 1
   if (arg$compareunpenal) 
     npreds <- npreds - 1
@@ -88,25 +105,9 @@ predict.grridge <- function (object, datanew, printpred = FALSE,
     }
   }
   
-  if (arg$selectionForward) {
-    predobj <- penobj[[npreds+1]]
-    whsel <- grr$whichsel
-    nc <- ncol(grr$lambdamultvec)
-    lmvecall <- grr$lambdamultvec[, nc]
-    Xsamw <- t(t(Xsam)/sqrt(lmvecall))
-    Xsamw <- Xsamw[, whsel, drop = FALSE]
-    predell <- predict(predobj, Xsamw, data = dataunpensam)[1:npred]
-    predellall <- cbind(predellall, predell)
-    if (recalibrate) {
-      datlp <- Xsamw %*% predobj@penalized
-      refitmod <- glm(responsetest ~ 1 + datlp, family = "binomial")
-      predell2 <- predict(refitmod, type = "response")
-      predellall2 <- cbind(predellall2, predell2)
-    }
-  }
   
-  if (arg$compareEN || arg$selectionEN) {
-    add = arg$selectionForward + arg$comparelasso
+  if (arg$selectionEN) {
+    add =  arg$comparelasso
     take = npreds + add + 1
     predobj <- penobj[[take]]
     whsel <- grr$resEN$whichEN
@@ -126,14 +127,13 @@ predict.grridge <- function (object, datanew, printpred = FALSE,
   
   if (arg$comparelasso) {
     
-    if (arg$selectionForward)
-      take <- npreds + 2
-    else take <- npreds
+    take <- npreds+1
     
     print(paste("takelasso",take))
     predobj <- penobj[[take]]
-    predell <- predict(predobj, Xsam, unpenalized = unpenal, 
-                       data = dataunpensam)[1:npred]
+    
+    predell <- as.numeric(predict(predobj,cbind(Xsam,mmout),s=c(optllasso),offset=offsout,type="response"))
+    
     predellall <- cbind(predellall, predell)
     if (recalibrate) {
       datlp <- Xsam %*% predobj@penalized
@@ -145,7 +145,7 @@ predict.grridge <- function (object, datanew, printpred = FALSE,
     }
   }
   if (arg$compareunpenal) {
-    nadd <- arg$selectionForward + arg$compareEN + arg$comparelasso
+    nadd <- arg$selectionEN + arg$comparelasso
     take <- npreds + nadd + 1
     predobj <- penobj[[take]]
     predell <- predict(predobj, data = dataunpensam, type = "response")[1:npred]
