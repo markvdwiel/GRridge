@@ -17,7 +17,7 @@ Numeric vector, with values between 0 and 1
 Binary vector.
 }
   \item{cutoffs}{
-Numeric vector, with increasing values between 0 and 1.
+Numeric vector, with DECREASING values between 1 and 0.
 }
 }
 \details{
