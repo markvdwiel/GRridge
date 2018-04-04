@@ -5,7 +5,14 @@
     allobstimes <- sort(response[, 1])
   balance <- FALSE
   nsam <- ncol(highdimdata)
-  if(grr$arguments$standardizeX) highdimdata <- (highdimdata-apply(highdimdata,1,mean))/apply(highdimdata,1,sd)
+  
+  if(grr$arg$standardizeX=TRUE){
+    print("Covariates are standardized")
+    sds <- apply(highdimdata,1,sd)
+    sds2 <- sapply(sds,function(x) max(x,10^{-5}))
+    highdimdata <- (highdimdata-apply(highdimdata,1,mean))/sds2 
+  }
+  
   if (is.null(colnames(highdimdata))) {
     print("No sample names available. Creating names S1, ..., Sn.")
     cnames <- sapply(1:nsam, function(i) paste("S", i, sep = ""))
@@ -116,7 +123,7 @@
                      maxsel = arg$maxsel, cvlmarg = arg$cvlmarg, dataunpen = dataunpenmin, 
                      savepredobj = arg$savepredobj, ord = arg$ord, comparelasso = arg$comparelasso, 
                      optllasso = arg$optllasso, selectionEN = arg$selectionEN, 
-                     compareunpenal = arg$compareunpenal, modus = arg$modus, EBlambda=arg$EBlambda, standardizeX = arg$standardizeX)
+                     compareunpenal = arg$compareunpenal, modus = arg$modus, EBlambda=arg$EBlambda, standardizeX = FALSE)
     penobj <- grmin$predobj
     Xsam <- t(highdimdata[, samout, drop = FALSE])
     optl<-grmin$arguments$optl

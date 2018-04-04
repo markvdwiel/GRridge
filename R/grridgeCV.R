@@ -1,8 +1,14 @@
 grridgeCV <- function (grr, highdimdata, response, outerfold = length(response), 
           fixedfolds = TRUE, recalibrate = FALSE) {
   model <- grr$model
-  
   if(model=="linear") return(.grridgeCVlin(grr=grr, highdimdata=highdimdata, response=response,  outerfold = outerfold, fixedfolds = fixedfolds, recalibrate = recalibrate))
+  
+  if(grr$arg$standardizeX=TRUE){
+    print("Covariates are standardized")
+    sds <- apply(highdimdata,1,sd)
+    sds2 <- sapply(sds,function(x) max(x,10^{-5}))
+    highdimdata <- (highdimdata-apply(highdimdata,1,mean))/sds2 
+  }
   
   if (model == "survival") 
     allobstimes <- sort(response[, 1])
@@ -111,6 +117,7 @@ grridgeCV <- function (grr, highdimdata, response, outerfold = length(response),
     }
     
     if (length(offsarg) > 1) offsmin <- offsarg[-samout] else offsmin <- offsarg
+    #switch of standardization, as this is done before fitting
     grmin <- grridge(highdimdatamin, responsemin, partitions = arg$partitions, 
                      unpenal = arg$unpenal, offset = offsmin, method = arg$method, 
                      niter = arg$niter, monotone = arg$monotone, optl = arg$optl, 
@@ -118,7 +125,7 @@ grridgeCV <- function (grr, highdimdata, response, outerfold = length(response),
                      maxsel = arg$maxsel,  cvlmarg = arg$cvlmarg, dataunpen = dataunpenmin, 
                      savepredobj = arg$savepredobj, ord = arg$ord, comparelasso = arg$comparelasso, 
                      optllasso = arg$optllasso, selectionEN = arg$selectionEN, 
-                     compareunpenal = arg$compareunpenal, modus = arg$modus,EBlambda=arg$EBlambda, standardizeX = arg$standardizeX)
+                     compareunpenal = arg$compareunpenal, modus = arg$modus,EBlambda=arg$EBlambda, standardizeX = FALSE)
     penobj <- grmin$predobj
     dataunpen <- arg$dataunpen
     Xsam <- t(highdimdata[, samout, drop = FALSE])
