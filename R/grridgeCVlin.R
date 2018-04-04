@@ -1,12 +1,13 @@
 .grridgeCVlin <- function (grr, highdimdata, response, outerfold = length(response), 
           fixedfolds = TRUE, recalibrate = FALSE) {
   model <- grr$model
+  arg <- grr$arguments
   if (model == "survival") 
     allobstimes <- sort(response[, 1])
   balance <- FALSE
   nsam <- ncol(highdimdata)
   
-  if(grr$arg$standardizeX=TRUE){
+  if(arg$standardizeX=TRUE){
     print("Covariates are standardized")
     sds <- apply(highdimdata,1,sd)
     sds2 <- sapply(sds,function(x) max(x,10^{-5}))
@@ -100,7 +101,6 @@
     nin <- length(response)-nout
     highdimdatamin <- highdimdata[, -samout]
     responsemin <- response[-samout]
-    arg <- grr$arguments
     dataunpenmin <- arg$dataunpen[-samout, , drop = FALSE]
     offsarg <- arg$offset
     unpenal = arg$unpenal

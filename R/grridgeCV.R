@@ -1,9 +1,10 @@
 grridgeCV <- function (grr, highdimdata, response, outerfold = length(response), 
           fixedfolds = TRUE, recalibrate = FALSE) {
   model <- grr$model
+  arg <- grr$arguments
   if(model=="linear") return(.grridgeCVlin(grr=grr, highdimdata=highdimdata, response=response,  outerfold = outerfold, fixedfolds = fixedfolds, recalibrate = recalibrate))
   
-  if(grr$arg$standardizeX=TRUE){
+  if(arg$standardizeX=TRUE){
     print("Covariates are standardized")
     sds <- apply(highdimdata,1,sd)
     sds2 <- sapply(sds,function(x) max(x,10^{-5}))
@@ -102,7 +103,6 @@ grridgeCV <- function (grr, highdimdata, response, outerfold = length(response),
     nout <- length(samout)
     highdimdatamin <- highdimdata[, -samout]
     responsemin <- response[-samout]
-    arg <- grr$arguments
     dataunpenmin <- arg$dataunpen[-samout, , drop = FALSE]
     offsarg <- arg$offset
     unpenal = arg$unpenal
