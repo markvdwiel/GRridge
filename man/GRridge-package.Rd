@@ -19,8 +19,8 @@ functions for evaluating the predictive performance.
 \tabular{ll}{
 Package: \tab GRridge\cr
 Type: \tab Package\cr
-Version: \tab 0.99.24\cr
-Date: \tab 2017-11-04\cr
+Version: \tab 1.3.4\cr
+Date: \tab 2018-04-04\cr
 License: \tab GPL \cr
 }
 
