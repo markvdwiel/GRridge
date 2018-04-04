@@ -7,7 +7,7 @@
   balance <- FALSE
   nsam <- ncol(highdimdata)
   
-  if(arg$standardizeX=TRUE){
+  if(arg$standardizeX){
     print("Covariates are standardized")
     sds <- apply(highdimdata,1,sd)
     sds2 <- sapply(sds,function(x) max(x,10^{-5}))

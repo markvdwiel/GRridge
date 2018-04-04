@@ -24,6 +24,13 @@ predict.grridge <- function (object, datanew, printpred = FALSE,
   }
   penobj <- grr$predobj
   arg <- grr$arguments
+  
+  if(arg$standardizeX) {
+    cat("Model has been fit on standardized features. Make sure datanew contains standardized features. 
+        Use either the training data or datanew (if sufficiently large, say N>20) to standardize. See 
+        ?predict.grridge.")
+  }
+  
   offsarg <- arg$offset
   if (class(datanew) != "data.frame") 
     datanew <- data.frame(datanew)

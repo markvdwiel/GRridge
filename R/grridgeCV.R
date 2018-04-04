@@ -4,7 +4,7 @@ grridgeCV <- function (grr, highdimdata, response, outerfold = length(response),
   arg <- grr$arguments
   if(model=="linear") return(.grridgeCVlin(grr=grr, highdimdata=highdimdata, response=response,  outerfold = outerfold, fixedfolds = fixedfolds, recalibrate = recalibrate))
   
-  if(arg$standardizeX=TRUE){
+  if(arg$standardizeX){
     print("Covariates are standardized")
     sds <- apply(highdimdata,1,sd)
     sds2 <- sapply(sds,function(x) max(x,10^{-5}))
