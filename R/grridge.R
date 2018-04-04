@@ -6,7 +6,6 @@ grridge <- function(highdimdata, response, partitions, unpenal = ~1,
                     comparelasso=FALSE,optllasso=NULL,cvllasso=TRUE,
                     compareunpenal=FALSE,trace=FALSE,modus=1,
                     EBlambda=FALSE,standardizeX = TRUE){#
-  
   if(class(response) =="factor") {
     nlevel <- length(levels(response))
     if(nlevel != 2){
@@ -47,7 +46,9 @@ grridge <- function(highdimdata, response, partitions, unpenal = ~1,
   
   if(standardizeX) {
     print("Covariates are standardized")
-    highdimdata <- (highdimdata-apply(highdimdata,1,mean))/apply(highdimdata,1,sd)
+    sds <- apply(highdimdata,1,sd)
+    sds2 <- sapply(sds,function(x) max(x,10^{-5}))
+    highdimdata <- (highdimdata-apply(highdimdata,1,mean))/sds2
   }
   nsam <- ncol(highdimdata)
   
@@ -230,10 +231,10 @@ grridge <- function(highdimdata, response, partitions, unpenal = ~1,
           Wi <- sqrt(preds*(1-preds)) 
           constlam <- 2
         }
-        if(model == "linear"){
-          Wi <- rep(1,length(preds))
-          constlam <- 1
-        }
+        # if(model == "linear"){   #running grridgelin when model =linear
+        #   Wi <- rep(1,length(preds))
+        #   constlam <- 1
+        # }
         if(model == "survival"){
           resptime <- response[,1]
           predsnew <- -log(sapply(1:nsam,function(k) survival(preds,time=resptime[k])[k]))
@@ -250,22 +251,22 @@ grridge <- function(highdimdata, response, partitions, unpenal = ~1,
         SVD <- svd(XMW)
         leftmat <- SVD$v %*% diag(1/((SVD$d)^2+constlam*optl)) %*% diag(SVD$d) %*% t(SVD$u)
         
-        if(model=="linear"){
-          Hatm <- XMW %*% leftmat 
-          df <- nsam - sum(diag(2*Hatm - Hatm %*% t(Hatm)))
-          VarRes <- sum((response - preds)^2)/df
-          print(paste("Sigma^2 estimate:",VarRes))
-          vars3 <- VarRes*rowSums(leftmat^2)
-        } else {
+        # if(model=="linear"){
+        #   Hatm <- XMW %*% leftmat 
+        #   df <- nsam - sum(diag(2*Hatm - Hatm %*% t(Hatm)))
+        #   VarRes <- sum((response - preds)^2)/df
+        #   print(paste("Sigma^2 estimate:",VarRes))
+        #   vars3 <- VarRes*rowSums(leftmat^2)
+        # } else {
           vars3 <- rowSums(leftmat^2)
-        }
+        #}
         
         which0 <- which(vars3==0)
         vars3[which0] <- 10^{-30}
         
-        if(model=="linear"){
-          mycoeff2svd <- (leftmat %*% response)^2
-        } 
+        # if(model=="linear"){
+        #   mycoeff2svd <- (leftmat %*% response)^2
+        # } 
         if(model=="logistic"){
           if(is.factor(response)) respnum <- as.numeric(response)-1 else respnum <- response
           z <- matrix(log(preds/(1-preds))+(respnum - preds)/(preds*(1-preds)),ncol=1) 

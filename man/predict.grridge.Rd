@@ -83,12 +83,27 @@ Examples: \code{\link{grridge}}.
 ## A list of monotone functions from the corresponding partition
 #monotoneFarkas <- c(FALSE,TRUE)
 
-#grFarkas <- grridge(datcenFarkas,respFarkas,optl=5.680087,
+#Hold-out first two samples
+#testset <- datcenFarkas[,1:2]
+#resptest <- respFarkas[1:2]
+
+#trainingset <- datcenFarkas[,-(1:2)]
+#resptraining <- respFarkas[-(1:2)]
+
+#grFarkas <- grridge(trainingset,resptraining,optl=5.680087,
 #                    partitionsFarkas,monotone=monotoneFarkas)
 
-## Prediction of the grridge model to the training samples
-#cutoffs <- rev(seq(0,1,by=0.1))
-#fakenew <- datcenFarkas
-#yhat <- predict.grridge(grFarkas,fakenew)
+## Prediction of the grridge model to the test samples
+
+#Standardize variables in testset, becasuse by default standardizeX = TRUE in grridge function.
+#Here, test set is small so we use the summaries of the training set. If the test set
+#is large one may opt to standardize wrt to the test set itself. 
+
+#sds <- apply(trainingset,1,sd)
+#sds2 <- sapply(sds,function(x) max(x,10^{-5}))
+#teststd <- (testset-apply(trainingset,1,mean))/sds2
+
+
+#yhat <- predict.grridge(grFarkas,teststd)
 }
 
