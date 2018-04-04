@@ -10,8 +10,11 @@
 
   if(standardizeX) {
     print("Covariates are standardized")
-    highdimdata <- (highdimdata-apply(highdimdata,1,mean))/apply(highdimdata,1,sd)
+    sds <- apply(highdimdata,1,sd)
+    sds2 <- sapply(sds,function(x) max(x,10^{-5}))
+    highdimdata <- (highdimdata-apply(highdimdata,1,mean))/sds2
   }
+  
   nsam <- ncol(highdimdata)
   
   
