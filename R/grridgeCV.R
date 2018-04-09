@@ -1,5 +1,6 @@
 grridgeCV <- function (grr, highdimdata, response, outerfold = length(response), 
           fixedfolds = TRUE, recalibrate = FALSE) {
+  #grr<-grWurdinger;highdimdata = dataStdWurdinger; response=respWurdinger;outerfold=3;fixedfolds = TRUE; recalibrate = FALSE
   model <- grr$model
   arg <- grr$arguments
   if(model=="linear") return(.grridgeCVlin(grr=grr, highdimdata=highdimdata, response=response,  outerfold = outerfold, fixedfolds = fixedfolds, recalibrate = recalibrate))
@@ -218,7 +219,9 @@ grridgeCV <- function (grr, highdimdata, response, outerfold = length(response),
       take <- npreds + 1
       predobj <- penobj[[take]]
       
-      predell <- as.numeric(predict(predobj,cbind(Xsam,mmout),s=c(optllasso),offset=offsout,type="response"))
+      #UPDATED 9/4/2018: glmnet changed its new for the new offset....
+      predell <- try(as.numeric(predict(predobj,cbind(Xsam,mmout),s=c(optllasso),offset=offsout, type="response")), silent=T)
+      if(class(predell) == "try-error") predell <- as.numeric(predict(predobj,cbind(Xsam,mmout),s=c(optllasso),newoffset=offsout,type="response"))
       
       predellall <- cbind(predellall, predell)
       if (recalibrate) {

@@ -156,7 +156,8 @@
           lmvecall <- grmin$lambdamultvec[, ell]
           Xsamw <- t(t(Xsam)/sqrt(lmvecall))
           
-          predell <- as.numeric(predict(predobj,cbind(Xsamw,mmout),s=c(optl),offset=offsout,type="response"))
+          predell <- try(as.numeric(predict(predobj,cbind(Xsamw,mmout),s=c(optl),offset=offsout,type="response")),silent=T)
+          if(class(predell) == "try-error") predell <- as.numeric(predict(predobj,cbind(Xsamw,mmout),s=c(optl),newoffset=offsout,type="response"))
           
           predellall <- cbind(predellall, predell)
           if (recalibrate) {
@@ -179,7 +180,8 @@
         take <- npreds + 1
         predobj <- penobj[[take]]
         
-        predell <- as.numeric(predict(predobj,cbind(Xsam,mmout),s=c(optllasso),offset=offsout,type="response"))
+        predell <- try(as.numeric(predict(predobj,cbind(Xsam,mmout),s=c(optllasso),offset=offsout, type="response")), silent=T)
+        if(class(predell) == "try-error") predell <- as.numeric(predict(predobj,cbind(Xsam,mmout),s=c(optllasso),newoffset=offsout,type="response"))
         
         predellall <- cbind(predellall, predell)
         if (recalibrate) {
@@ -206,7 +208,9 @@
         whEN <- grmin$resEN$whichEN
         Xsamw <- Xsamw[, whEN, drop = FALSE]
         
-        predell <- as.numeric(predict(predobj,cbind(Xsamw,mmout),s=c(optl),offset=offsout,type="response"))
+        predell <- try(as.numeric(predict(predobj,cbind(Xsamw,mmout),s=c(optl),offset=offsout,type="response")),silent=T)
+        if(class(predell) == "try-error") predell <- as.numeric(predict(predobj,cbind(Xsamw,mmout),s=c(optl),newoffset=offsout,type="response"))
+        
         
         predellall <- cbind(predellall, predell)
         if (recalibrate) {
