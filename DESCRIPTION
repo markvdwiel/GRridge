@@ -1,7 +1,7 @@
 Package: GRridge
 Type: Package
 Title: Better prediction by use of co-data: Adaptive group-regularized ridge regression
-Version: 1.3.4
+Version: 1.4.0
 Date: 2018-4-4
 Author: Mark A. van de Wiel <mark.vdwiel@vumc.nl>, Putri W. Novianti <p.novianti@vumc.nl>
 Maintainer: Mark A. van de Wiel <mark.vdwiel@vumc.nl>
