@@ -36,7 +36,8 @@ Boolean. If \code{TRUE} the group sizes are as equal as possible.
 }
 
 \item{ngroup}{
-Numeric. Number of the groups to create. Only relevant when \code{vec} is a numeric vector.
+Numeric. Number of the groups to create. Only relevant when \code{vec} is a numeric vector and 
+\code{grsize} is NOT specified.
 }
 
 \item{mingr}{

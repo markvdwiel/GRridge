@@ -3,6 +3,7 @@ CreatePartition <- function(vec,varnamesdata=NULL,
                             decreasing=TRUE,uniform=FALSE,
                             ngroup=10,mingr=25){
   #vec <- 1:67;ngroup=10;varnamesdata=NULL;subset=NULL;grsize=NULL;decreasing=TRUE;uniform=TRUE;mingr=50
+  #vec <- sdsF;grsize=5000;decreasing=FALSE;uniform=TRUE
     if(is.factor(vec)){
       firstcl <- lapply(as.character(levels(vec)),function(xg) which(vec==xg))
       names(firstcl) <- levels(vec)
@@ -24,7 +25,7 @@ CreatePartition <- function(vec,varnamesdata=NULL,
                 orderp2 <- order(vec,decreasing=FALSE) 
                 lroep <- length(vec)   
                 }
-            if(is.null(ngroup)){
+            if(!is.null(grsize)){
             ngr <- floor(lroep/grsize)
             firstcl <- lapply(1:ngr,function(xg) {
             if(xg < ngr) els <- orderp2[(1+(xg-1)*grsize):(xg*grsize)] else 
