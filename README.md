@@ -4,9 +4,10 @@ R package for better prediction by use of co-data: Adaptive group-regularized ri
 
 Installation:
 
-source("https://bioconductor.org/biocLite.R")
+if (!requireNamespace("BiocManager", quietly=TRUE))
+    install.packages("BiocManager")
 
-biocLite("GRridge")
+BiocManager::install("GRridge")
 
 NOTE: VIGNETTE can be downloaded from markvdwiel/GRridge/vignettes. This contains an example on methylation data and on mRNAseq data.
 
