@@ -74,8 +74,9 @@ Key elements of the GRridge package are:
 %The {\tt GRridge} package is freely available online. We show {\tt GRridge} installation from Bioconductor
 
 %<<echo=TRUE,print=FALSE>>=
-%source("https://bioconductor.org/biocLite.R")
-%biocLite("GRridge")
+%if (!requireNamespace("BiocManager", quietly=TRUE))
+    install.packages("BiocManager")
+%BiocManager::install("GRridge")
 %@
 
 The GRridge package depends on these following R packages: {\tt penalized} \citep{goeman2010l1}, {\tt glmnet} \citep{glmnet1} ,{\tt survival} (Therneau, 2015) and {\tt Iso} (Turner, 2015).
