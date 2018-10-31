@@ -295,7 +295,12 @@
         ngroup1 <- length(whgr)
         names(lambdas[[cl]]) <- names(whgr)
         coeff <- penprev$beta[1:nr]
-        preds <- as.numeric(predict(penprev,Xglmnet,s=c(optl),type="response",offset=offset))
+        #preds <- as.numeric(predict(penprev,Xglmnet,s=c(optl),type="response",offset=offset))
+        
+        #changed 31/10/2018
+        preds <- try(as.numeric(predict(penprev,Xglmnet,s=c(optl),type="response",offset=offset),silent=T)
+        if(class(preds) == "try-error") preds <- as.numeric(predict(penprev,Xglmnet,s=c(optl),type="response",newoffset=offset))
+        
         
       coeffsq <- coeff^2
       
@@ -597,10 +602,17 @@
 #################### END LOOP ################  
   
 Xglmnet <- cbind(XMw0,mm)
-  
+
+  #changed 31/10  
 if(niter==0) {pen <- pen0;XMw0<-XM0;cvln1<-cvln0;soltau <- NULL}
-pred0 <- as.numeric(predict(pen0,XM0,s=c(optl),offset=offset,type="response"))
-predw <- as.numeric(predict(pen,Xglmnet,s=c(optl),offset=offset,type="response"))
+pred0 <- try(as.numeric(predict(pen0,XM0,s=c(optl),offset=offset,type="response"),silent=T)
+predw <- try(as.numeric(predict(pen,Xglmnet,s=c(optl),offset=offset,type="response"),silent=T)
+             
+if(class(pred0) == "try-error"){
+pred0 <- predict(pen0,XM0,s=c(optl),newoffset=offset,type="response") 
+predw <- predict(pen,Xglmnet,s=c(optl),newoffset=offset,type="response") 
+}
+
 
 predshere <- cbind(pred0,predw)
 cvlnssam <- c(cveridge=cvln0,cvegrridge=cvln1)

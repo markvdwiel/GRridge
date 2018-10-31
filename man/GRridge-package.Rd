@@ -19,8 +19,8 @@ functions for evaluating the predictive performance.
 \tabular{ll}{
 Package: \tab GRridge\cr
 Type: \tab Package\cr
-Version: \tab 1.3.4\cr
-Date: \tab 2018-04-04\cr
+Version: \tab 1.5.4\cr
+Date: \tab 2018-10-31\cr
 License: \tab GPL \cr
 }
 
@@ -29,6 +29,7 @@ Main functions in the GRridge package are:
  \code{auc}: Computes Area-under-the-ROC-curve \cr
  \code{CreatePartition}: Creates a partition (groups) of variables \cr
  \code{dataFarkas}: Large data set plus external information \cr
+ \code{dataSimlin}: Small simulated data set with linear response \cr
  \code{dataVerlaat}: Methylation data plus external information \cr
  \code{dataWurdinger}: RNAseq data plus external information \cr
  \code{simlinsmall}: Simulated data for linear regression \cr
