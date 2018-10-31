@@ -605,8 +605,8 @@ Xglmnet <- cbind(XMw0,mm)
 
   #changed 31/10  
 if(niter==0) {pen <- pen0;XMw0<-XM0;cvln1<-cvln0;soltau <- NULL}
-pred0 <- try(as.numeric(predict(pen0,XM0,s=c(optl),offset=offset,type="response"),silent=T)
-predw <- try(as.numeric(predict(pen,Xglmnet,s=c(optl),offset=offset,type="response"),silent=T)
+pred0 <- try(as.numeric(predict(pen0,XM0,s=c(optl),offset=offset,type="response")),silent=T)
+predw <- try(as.numeric(predict(pen,Xglmnet,s=c(optl),offset=offset,type="response")),silent=T)
              
 if(class(pred0) == "try-error"){
 pred0 <- predict(pen0,XM0,s=c(optl),newoffset=offset,type="response") 
