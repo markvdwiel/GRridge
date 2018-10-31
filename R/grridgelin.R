@@ -298,7 +298,7 @@
         #preds <- as.numeric(predict(penprev,Xglmnet,s=c(optl),type="response",offset=offset))
         
         #changed 31/10/2018
-        preds <- try(as.numeric(predict(penprev,Xglmnet,s=c(optl),type="response",offset=offset),silent=T)
+        preds <- try(as.numeric(predict(penprev,Xglmnet,s=c(optl),type="response",offset=offset)),silent=T)
         if(class(preds) == "try-error") preds <- as.numeric(predict(penprev,Xglmnet,s=c(optl),type="response",newoffset=offset))
         
         
