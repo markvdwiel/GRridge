@@ -18,7 +18,7 @@ part5: list with 5 components representing partition of variables
 Three R objects (see Description)
 }
 
-\usage{data(datSimlin)}
+\usage{data(dataSimlin)}
 
 
 
@@ -27,13 +27,13 @@ This is simulated data allowing a quick test for grridge
 }
 
 \examples{
-data(datSimlin)
+data(dataSimlin)
 
 #apply grridge
 grsim <- grridge(highdimdata=simdata, response=Y, partitions=part5, unpenal = ~1, innfold=10)
 
 #apply CV
-grsimcv <- grridgeCV(grsimold,simdata,Y,outerfold=5)
+grsimcv <- grridgeCV(grsim,simdata,Y,outerfold=5)
 
 }
 

@@ -41,8 +41,7 @@ For linear and logistic regression: A matrix containing the predictions. The fir
 the second the prediction by ordinary ridge, the third the predictions by group-regularized ridge, the 
 fourth (optional) the predictions by group-regularized ridge plus selection. Finally, it may contain
 predictions by lasso and/or a regression model with unpenalized covariates only. 
-For Cox regression: a list with three components. First, a matrix with the linear predictions, in the same format as above.
-Second, a list of survival probability matrices (one for each prediction model), the rows of which indicate the individuals and the columns indicate the observed times. Third, a vector with the observed times. 
+For Cox regression: the relative hazard is returned, which equals the exponentiated linear predictor.
 }
 
 \references{
