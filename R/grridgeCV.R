@@ -1,6 +1,7 @@
 grridgeCV <- function (grr, highdimdata, response, outerfold = length(response), 
           fixedfolds = TRUE, recalibrate = FALSE) {
-  #grr<-grWurdinger;highdimdata = dataStdWurdinger; response=respWurdinger;outerfold=3;fixedfolds = TRUE; recalibrate = FALSE
+  #grr = grridge(highdimdata=simdata, response=round(exp(Y)/(1+exp(Y))), partitions=part5, unpenal = ~1, innfold=10,selectionEN=TRUE)
+  #highdimdata=simdata; response=round(exp(Y)/(1+exp(Y))); partitions=part5; unpenal = ~1; outerfold=3;fixedfolds = TRUE; recalibrate = FALSE
   model <- grr$model
   arg <- grr$arguments
   if(model=="linear") return(.grridgeCVlin(grr=grr, highdimdata=highdimdata, response=response,  outerfold = outerfold, fixedfolds = fixedfolds, recalibrate = recalibrate))
@@ -178,8 +179,8 @@ grridgeCV <- function (grr, highdimdata, response, outerfold = length(response),
       npreds <- npreds - 1
     if (arg$compareunpenal) 
       npreds <- npreds - 1
-    if (arg$selectionEN) 
-      npreds <- npreds - 1
+    if (arg$selectionEN) npredsEN <- length(arg$maxsel) else npredsEN <- 0
+    npreds <- npreds - npredsEN
     if (npreds > 0) {
       for (ell in 1:npreds) {
         predobj <- penobj[[ell]]
@@ -240,12 +241,13 @@ grridgeCV <- function (grr, highdimdata, response, outerfold = length(response),
     }
     if (arg$selectionEN) {
       nadd <- arg$comparelasso
-      take <- npreds + nadd + 1
-      predobj <- penobj[[take]]
+      toadd <- npreds + nadd
+      for (ell in 1:npredsEN) {
+      predobj <- penobj[[toadd+ell]]
       nc <- ncol(grmin$lambdamultvec)
       lmvecall <- grmin$lambdamultvec[, nc]
       Xsamw <- t(t(Xsam)/sqrt(lmvecall))
-      whEN <- grmin$resEN$whichEN
+      whEN <- grmin$resEN[[ell]]$whichEN
       Xsamw <- Xsamw[, whEN, drop = FALSE]
       
       if(model != "survival")  predell <- predict(predobj, Xsamw, unpenalized = unpenal,  data = dataunpensam)[1:nout]
@@ -273,9 +275,10 @@ grridgeCV <- function (grr, highdimdata, response, outerfold = length(response),
         predell2 <- predict(refitmod, type = "response")
         predellall2 <- cbind(predellall2, predell2)
       }
+      } #end for ell
     }
     if (arg$compareunpenal) {
-      nadd <- arg$comparelasso + arg$selectionEN
+      nadd <- arg$comparelasso +  npredsEN
       take <- npreds + nadd + 1
       predobj <- penobj[[take]]
       

@@ -10,7 +10,7 @@ This function implements adaptive group-regularized (logistic) ridge regression 
 grridge(highdimdata, response, partitions, unpenal = ~1, 
         offset=NULL, method="exactstable",
         niter=10, monotone=NULL, optl=NULL, innfold=NULL, 
-        fixedfoldsinn=TRUE, maxsel=100,selectionEN=FALSE,cvlmarg=1,
+        fixedfoldsinn=TRUE, maxsel=c(25,100),selectionEN=FALSE,cvlmarg=1,
         savepredobj="all", dataunpen=NULL, ord = 1:length(partitions),
         comparelasso=FALSE,optllasso=NULL,cvllasso=TRUE,
         compareunpenal=FALSE,trace=FALSE,modus=1,
@@ -62,7 +62,7 @@ Boolean. Use fixed folds for inner cross-validation?
 Boolean. If \code{selectionEN=TRUE} then post-hoc variable selection by weighted elastic net is performed.
 }
   \item{maxsel}{
-Integer. The maximum number of selected variables.
+Vector of integers. The maximum number of selected variables. Can be multiple to allow comparing models of various sizes.
 }
   \item{cvlmarg}{
 Numeric. Maximum margin (in percentage) that the cross-validated likelihood of the model with selected variables may deviate from the optimum one.
@@ -119,8 +119,9 @@ Each partition is a (named) list that contains the indices (row numbers) of the 
 About \code{savepredobj}: use \code{savepredobj="all"} if you want to compare performances of the various predictors (e.g. ordinary ridge, 
 group-regularized ridge, group-regularized ridge + selection) using \code{\link{grridgeCV}}.
 About \code{monotone}: We recommend to set the jth component of \code{monotone} to \code{TRUE} when the jth partition 
-is based on external p-values, test statistics or regression coeeficients. This increases stability of the predictions. If \code{selectionEN=TRUE}, EN selection will select exactly \code{maxsel} variables. Note that EN is only used for selection; 
-the final predictive model is a group-ridge model fitted only on the selected variables using the penalties estimated by GRridge. 
+is based on external p-values, test statistics or regression coeeficients. This increases stability of the predictions. If \code{selectionEN=TRUE}, EN selection will, for all elements m of \code{maxsel}, select exactly m or fewer variables. Note that EN is only used for selection; 
+the final predictive model is a group-ridge model fitted only on the selected variables using the penalties estimated by GRridge. Using multiple values for 
+\code{maxsel} allows comparing models of various sizes, also in terms of cross-validated performance when using \code{\link{grridgeCV}}.
 About \code{cvlmarg}: We recommended to use values between 0 and 2. A larger value will generally result in fewer selected variables by forward selection. 
 About \code{innfold}: for large data sets considerable computing time may be saved when setting \code{innfold=10} instead of default leave-one-out-cross-validation (LOOCV). About \code{method}: \code{"exactstable"} is recommended. If the number of variables is not very large, say \code{<2000}, the faster non-iterative \code{"exact"} method can be used as an alternative. \code{grridge} uses the \code{penalized} package to fit logistic and survival ridge models; \code{glmnet} is used for linear response and for fitting lasso when \code{comparelasso=TRUE}. 
 }
@@ -134,7 +135,7 @@ A list object containing:
   \item{predobj}{List of prediction objects}
   \item{betas}{Estimated regression coefficients}
   \item{reslasso}{Results of the lasso. \code{NULL} when \code{comparelasso=FALSE}}
-  \item{resEN}{Results of the Elastic Net selection. \code{NULL} when \code{compareEN=FALSE}}
+  \item{resEN}{Results of the Elastic Net selection for all elements of \code{maxsel}. \code{list()} when \code{selectionEN=FALSE}}
   \item{model}{Model used for fitting: logistic, linear or survival}
   \item{arguments}{Arguments used to call the function}
   \item{allpreds}{Predictions on the same data}

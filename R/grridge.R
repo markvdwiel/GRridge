@@ -1,11 +1,20 @@
 grridge <- function(highdimdata, response, partitions, unpenal = ~1, 
                     offset=NULL, method="exactstable",
                     niter=10, monotone=NULL, optl=NULL, innfold=NULL, 
-                    fixedfoldsinn=TRUE, maxsel=100,selectionEN=FALSE,cvlmarg=1,
+                    fixedfoldsinn=TRUE, maxsel=c(25,100),selectionEN=FALSE,cvlmarg=1,
                     savepredobj="all", dataunpen=NULL, ord = 1:length(partitions),
                     comparelasso=FALSE,optllasso=NULL,cvllasso=TRUE,
                     compareunpenal=FALSE,trace=FALSE,modus=1,
                     EBlambda=FALSE,standardizeX = TRUE){#
+  # highdimdata=simdata; response=round(exp(Y)/(1+exp(Y))); partitions=part5; unpenal = ~1; innfold=3;
+  # offset=NULL; method="exactstable";
+  # niter=10; monotone=NULL; optl=NULL; innfold=NULL;
+  # fixedfoldsinn=TRUE; maxsel=c(25,100);selectionEN=TRUE;cvlmarg=1;
+  # savepredobj="all"; dataunpen=NULL; ord = 1:length(partitions);
+  # comparelasso=FALSE;optllasso=NULL;cvllasso=TRUE;
+  # compareunpenal=FALSE;trace=FALSE;modus=1;
+  # EBlambda=FALSE;standardizeX = TRUE
+
   if(class(response) =="factor") {
     nlevel <- length(levels(response))
     if(nlevel != 2){
@@ -57,6 +66,7 @@ grridge <- function(highdimdata, response, partitions, unpenal = ~1,
   
   if(class(partitions[[1]]) =="integer"){
     partitions=list(group=partitions)
+    ord=1
   }
   nclass <- length(partitions)
   
@@ -123,7 +133,8 @@ grridge <- function(highdimdata, response, partitions, unpenal = ~1,
   nmp <- c("NoGroups","GroupRegul")
   nmpweight <- nmp #to be used later
   if(comparelasso) nmp <- c(nmp,"lasso") 
-  if(selectionEN) nmp <- c(nmp,"EN")
+  #new 29/11
+  if(selectionEN) nmp <- c(nmp,paste("EN",maxsel,sep=""))
   if(compareunpenal) nmp <- c(nmp,"modelunpen")
   
   
@@ -597,12 +608,13 @@ if(comparelasso){
   print(paste("lasso uses",length(whichlasso),"penalized variables"))
 }
 
-resEN <- NULL 
+resEN <- list()
 #one cannot select more than the nr of variables
-maxsel2 <- min(maxsel,nr)
 if(selectionEN){
-print("Variable selection by elastic net started...")  
-  
+  print("Variable selection by elastic net started...")  
+  for(maxsel0 in maxsel){
+    maxsel2 <- min(maxsel0,nr)
+  print(paste("Maximum nr of variables",maxsel2))
   fsel <- function(lam1,maxselec=maxsel2,lam2){
     if(lam1==0) return(nfeat-maxselec) else {
       penselEN <- penalized(responsemin,XMw0,lambda1=lam1,lambda2=lam2, 
@@ -620,7 +632,9 @@ print("Variable selection by elastic net started...")
                          trace=FALSE,maxiter=100)
   coefEN <- penselEN@penalized
   predobj <- c(predobj,penselEN)
-  resEN <- list(whichEN=whichEN,betasEN=coefEN)
+  resEN <- c(resEN,list(list(whichEN=whichEN,betasEN=coefEN)))
+  }
+  names(resEN) <- paste("resEN",maxsel,sep="")
 }
 
 

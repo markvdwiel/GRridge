@@ -1,11 +1,19 @@
 .grridgelin <- function(highdimdata, response, partitions, unpenal = ~1, 
                     offset=NULL, method="exactstable",
                     niter=10, monotone=NULL, optl=NULL, innfold=NULL, 
-                    fixedfoldsinn=TRUE, maxsel=25,selectionEN=FALSE,cvlmarg=1,
+                    fixedfoldsinn=TRUE, maxsel=c(25,100),selectionEN=FALSE,cvlmarg=1,
                     savepredobj="all", dataunpen=NULL, ord = 1:length(partitions),
                     comparelasso=FALSE,optllasso=NULL,cvllasso=TRUE,
                     compareunpenal=FALSE,trace=FALSE,modus=1,EBlambda=FALSE,standardizeX = TRUE){#
-  
+  # highdimdata=simdata; response=Y; partitions=part5; unpenal = ~1; innfold=10
+  # offset=NULL; method="exactstable";
+  # niter=10; monotone=NULL; optl=NULL; innfold=NULL;
+  # fixedfoldsinn=TRUE; maxsel=c(25,100);selectionEN=FALSE;cvlmarg=1;
+  # savepredobj="all"; dataunpen=NULL; ord = 1:length(partitions);
+  # comparelasso=FALSE;optllasso=NULL;cvllasso=TRUE;
+  # compareunpenal=FALSE;trace=FALSE;modus=1;
+  # EBlambda=FALSE;standardizeX = TRUE
+  #grl <- .grridgelin(highdimdata=simdata, response=Y, partitions=part5,maxsel=25, unpenal = ~1, innfold=10,selectionEN=TRUE)
   print("Using GLMnet for fitting")
 
   if(standardizeX) {
@@ -91,7 +99,8 @@
   nmpweight <- nmp #to be used later
   
   if(comparelasso) nmp <- c(nmp,"lasso") 
-  if(selectionEN) nmp <- c(nmp,"EN")
+  #new 29/11
+  if(selectionEN) nmp <- c(nmp,paste("EN",maxsel,sep=""))
   if(compareunpenal) nmp <- c(nmp,"modelunpen")
   
   if(class(response) =="factor") {
@@ -668,50 +677,56 @@ reslasso <- list(cvllasso=cvliklasso,whichlasso=whichlasso,betaslasso=betaslasso
 print(paste("lasso uses",length(whichlasso),"penalized variables"))
 }
 
-resEN <- NULL 
+resEN <- list() 
 
 #one cannot select more than the nr of variables
-maxsel2 <- min(maxsel,nr)
+#new 29/11
 if(selectionEN){
-print("Variable selection by elastic net started...")  
-  
-  fsel <- function(lam1,maxselec=maxsel2,lam2){
-    if(lam1==0) return(nfeat-maxselec) else {
-      alp = lam1/(lam1+lam2)
-      lam <- lam1+lam2
-      penselEN <- glmnet(x=cbind(XMw0,mm),y=response,offset=offset,nlambda=1,lambda=lam,
-                         penalty.factor=pf,alpha=alp,family=fam, intercept=interc,standardize=FALSE)
-      coef <- penselEN$beta[1:nr]
-      return(length(coef[coef!=0])-maxselec)
-    }
+    print("Variable selection by elastic net started...")  
+    for(maxsel0 in maxsel){
+      maxsel2 <- min(maxsel0,nr)
+      print(paste("Maximum nr of variables",maxsel2))
+      
+      fsel <- function(lam1,maxselec=maxsel2,lam2){
+        if(lam1==0) return(nfeat-maxselec) else {
+          alp = lam1/(lam1+lam2)
+          lam <- lam1+lam2
+          penselEN <- glmnet(x=cbind(XMw0,mm),y=response,offset=offset,nlambda=1,lambda=lam,
+                             penalty.factor=pf,alpha=alp,family=fam, intercept=interc,standardize=FALSE)
+          coef <- penselEN$beta[1:nr]
+          return(length(coef[coef!=0])-maxselec)
+        }
+      }
+      lam1 <- uniroot(fsel,interval=c(0,optl),maxiter=50,lam2=optl)$root
+      
+      cvEN <- cv.glmnet(x=cbind(XMw0,mm),y=response,offset=offset,nfolds=nf,
+                foldid=myfold, penalty.factor=pf,alpha=lam1/(lam1+optl),family=fam,intercept=interc,
+                standardize=FALSE)
+      
+      whmin <- which(cvEN$lambda==cvEN$lambda.min)
+      #glmnet output includes number of non-zero unpen covariates
+      nsel <-  cvEN$nzero[whmin]-nunpen
+      
+      #if model with fewer than maxsel vars is better, use that
+      if(nsel > maxsel2) lambdaEN <- lam1+optl else lambdaEN <- cvEN$lambda.min
+      penselEN0 <- glmnet(x=cbind(XMw0,mm),y=response,offset=offset,penalty.factor=pf,nlambda=1,lambda=lambdaEN,
+                     alpha=lam1/(lam1+optl),family=fam, intercept=interc,standardize=FALSE)
+              
+      coefEN0 <- penselEN0$beta[1:nr]
+      whichEN <- which(coefEN0 != 0)
+      nselEN <- length(whichEN)
+      print(paste("Model with EN selection uses",nselEN,"penalized variables"))
+      
+      #now re-fit GRridge model with selected variables only
+      penselEN <- glmnet(x=cbind(XMw0[,whichEN,drop=FALSE],mm),y=response,offset=offset,
+                         penalty.factor=pf,nlambda=1,lambda=optl,alpha=0,family=fam, intercept=interc,standardize=FALSE)
+      coefEN <- penselEN$beta[1:nselEN]
+      predobj <- c(predobj,list(penselEN))
+      resEN <- c(resEN,list(list(whichEN=whichEN,betasEN=coefEN)))
   }
-  lam1 <- uniroot(fsel,interval=c(0,optl),maxiter=50,lam2=optl)$root
-  
-  cvEN <- cv.glmnet(x=cbind(XMw0,mm),y=response,offset=offset,nfolds=nf,
-            foldid=myfold, penalty.factor=pf,alpha=lam1/(lam1+optl),family=fam,intercept=interc,
-            standardize=FALSE)
-  
-  whmin <- which(cvEN$lambda==cvEN$lambda.min)
-  #glmnet output includes number of non-zero unpen covariates
-  nsel <-  cvEN$nzero[whmin]-nunpen
-  
-  #if model with fewer than maxsel vars is better, use that
-  if(nsel > maxsel2) lambdaEN <- lam1+optl else lambdaEN <- cvEN$lambda.min
-  penselEN0 <- glmnet(x=cbind(XMw0,mm),y=response,offset=offset,penalty.factor=pf,nlambda=1,lambda=lambdaEN,
-                 alpha=lam1/(lam1+optl),family=fam, intercept=interc,standardize=FALSE)
-          
-  coefEN0 <- penselEN0$beta[1:nr]
-  whichEN <- which(coefEN0 != 0)
-  nselEN <- length(whichEN)
-  print(paste("Model with EN selection uses",nselEN,"penalized variables"))
-  
-  #now re-fit GRridge model with selected variables only
-  penselEN <- glmnet(x=cbind(XMw0[,whichEN,drop=FALSE],mm),y=response,offset=offset,
-                     penalty.factor=pf,nlambda=1,lambda=optl,alpha=0,family=fam, intercept=interc,standardize=FALSE)
-  coefEN <- penselEN$beta[1:nselEN]
-  predobj <- c(predobj,list(penselEN))
-  resEN <- list(whichEN=whichEN,betasEN=coefEN)
+  names(resEN) <- paste("resEN",maxsel,sep="")
 }
+
 
 if(compareunpenal){
 if(model=="survival"){

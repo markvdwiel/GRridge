@@ -39,7 +39,8 @@ ordinary (logistic) ridge regression. It can be used to compute ROC-curves. Abou
 \value{
 For linear and logistic regression: A matrix containing the predictions. The first column contains the sample indices, 
 the second the prediction by ordinary ridge, the third the predictions by group-regularized ridge, the 
-fourth (optional) the predictions by group-regularized ridge plus selection. Finally, it may contain
+next (optionally) the predictions by group-regularized ridge plus Elastic Net selection, possibly for multiple model sizes (as 
+specified by the argument \code{maxsel} when using \code{\link{grridge}}). Finally, it may contain
 predictions by lasso and/or a regression model with unpenalized covariates only. 
 For Cox regression: the relative hazard is returned, which equals the exponentiated linear predictor.
 }

@@ -1,5 +1,7 @@
 .grridgeCVlin <- function (grr, highdimdata, response, outerfold = length(response), 
           fixedfolds = TRUE, recalibrate = FALSE) {
+  #grl <- .grridgelin(highdimdata=simdata, response=Y, partitions=part5, unpenal = ~1, innfold=10,selectionEN=TRUE)
+  #grr <- grl; outerfold=3;highdimdata=simdata; response=Y;fixedfolds=TRUE;recalibrate=FALSE
   model <- grr$model
   arg <- grr$arguments
   if (model == "survival") 
@@ -147,8 +149,8 @@
         npreds <- npreds - 1
       if (arg$compareunpenal) 
         npreds <- npreds - 1
-      if (arg$selectionEN) 
-        npreds <- npreds - 1
+      if (arg$selectionEN) npredsEN <- length(arg$maxsel) else npredsEN <- 0
+        npreds <- npreds - npredsEN
       if (npreds > 0) {
         for (ell in 1:npreds) {
           #ell<-1
@@ -200,12 +202,13 @@
       }
       if (arg$selectionEN) {
         nadd <- arg$comparelasso
-        take <- npreds + nadd + 1
-        predobj <- penobj[[take]]
+        toadd <- npreds + nadd
+        for (ell in 1:npredsEN) {
+        predobj <- penobj[[toadd+ell]]
         nc <- ncol(grmin$lambdamultvec)
         lmvecall <- grmin$lambdamultvec[, nc]
         Xsamw <- t(t(Xsam)/sqrt(lmvecall))
-        whEN <- grmin$resEN$whichEN
+        whEN <- grmin$resEN[[ell]]$whichEN
         Xsamw <- Xsamw[, whEN, drop = FALSE]
         
         predell <- try(as.numeric(predict(predobj,cbind(Xsamw,mmout),s=c(optl),offset=offsout,type="response")),silent=T)
@@ -227,10 +230,11 @@
           predell2 <- predict(refitmod, type = "response")
           predellall2 <- cbind(predellall2, predell2)
         }
+        } #end for ell
       }
       #TODO
       if (arg$compareunpenal) {
-        nadd <- arg$comparelasso +  arg$selectionEN
+        nadd <- arg$comparelasso +  npredsEN
         take <- npreds + nadd + 1
         predobj <- penobj[[take]]
         predell <- predict(predobj, newdata = data.frame(mmout), #bug repaired 19/12/2016: data -> newdata
@@ -249,95 +253,9 @@
       }
       print(data.frame(response = response[samout], predellall))
       preds <- rbind(preds, predellall)
-    } else {
-      mmunpen <- as.matrix(model.matrix(unpenal, dataunpensam)[,-1])
-      npreds <- length(penobj)
-      if (arg$comparelasso) 
-        npreds <- npreds - 1
-      if (arg$compareunpenal) 
-        npreds <- npreds - 1
-      if (arg$selectionEN) 
-        npreds <- npreds - 1
-      if (npreds > 0) {
-        for (ell in 1:npreds) {
-          predobj <- penobj[[ell]]
-          lmvecall <- grmin$lambdamultvec[, ell]
-          Xsamw <- t(t(Xsam)/sqrt(lmvecall))
-          predell0 <- predict(predobj, Xsamw, unpenalized = unpenal, 
-                              data = dataunpensam)
-          predell <- sapply(allobstimes, function(tim) return(survival(predell0, 
-                                                                       time = tim)))
-          predellall <- cbind(predellall, predell)
-          coeffpen <- matrix(predobj@penalized, ncol = 1)
-          coeffunpen <- matrix(predobj@unpenalized, ncol = 1)
-          if (length(coeffunpen) == 0) 
-            linpredall <- cbind(linpredall, Xsamw %*% 
-                                  coeffpen)
-          else linpredall <- cbind(linpredall, Xsamw %*% 
-                                     coeffpen + mmunpen %*% coeffunpen)
-        }
-      }
-     
-      if (arg$comparelasso) {
-        take <- npreds + 1
-        predobj <- penobj[[take]]
-        predell0 <- predict(predobj, Xsam, unpenalized = unpenal, 
-                            data = dataunpensam)
-        predell <- sapply(allobstimes, function(tim) return(survival(predell0, 
-                                                                     time = tim)))
-        predellall <- cbind(predellall, predell)
-        coeffpen <- matrix(predobj@penalized, ncol = 1)
-        coeffunpen <- matrix(predobj@unpenalized, ncol = 1)
-        if (length(coeffunpen) == 0) 
-          linpredall <- cbind(linpredall, Xsam %*% coeffpen)
-        else linpredall <- cbind(linpredall, Xsam %*% 
-                                   coeffpen + mmunpen %*% coeffunpen)
-      }
-      if (arg$selectionEN) {
-        nadd <- arg$comparelasso
-        take <- npreds + nadd + 1
-        predobj <- penobj[[take]]
-        nc <- ncol(grmin$lambdamultvec)
-        lmvecall <- grmin$lambdamultvec[, nc]
-        Xsamw <- t(t(Xsam)/sqrt(lmvecall))
-        whEN <- grmin$resEN$whichEN
-        Xsamw <- Xsamw[, whEN, drop = FALSE]
-        predell0 <- predict(predobj, Xsamw, unpenalized = unpenal, 
-                            data = dataunpensam)
-        predell <- sapply(allobstimes, function(tim) return(survival(predell0, 
-                                                                     time = tim)))
-        predellall <- cbind(predellall, predell)
-        coeffpen <- matrix(predobj@penalized, ncol = 1)
-        coeffunpen <- matrix(predobj@unpenalized, ncol = 1)
-        if (length(coeffunpen) == 0) 
-          linpredall <- cbind(linpredall, Xsamw %*% coeffpen)
-        else linpredall <- cbind(linpredall, Xsamw %*% 
-                                   coeffpen + mmunpen %*% coeffunpen)
-      }
-      if (arg$compareunpenal) {
-        nadd <- arg$selectionEN + arg$comparelasso
-        take <- npreds + nadd + 1
-        predobj <- penobj[[take]]
-        bogus <- rep(0, nout)
-        predell0 <- predict(predobj, penalized = ~bogus, 
-                            unpenalized = unpenal, data = dataunpensam)
-        predell <- sapply(allobstimes, function(tim) return(survival(predell0, 
-                                                                     time = tim)))
-        predellall <- cbind(predellall, predell)
-        coeffunpen <- matrix(predobj@unpenalized, ncol = 1)
-        linpredall <- cbind(linpredall, mmunpen %*% coeffunpen)
-      }
-      print(paste("Sample(s) left out:", samout))
-      print("True:")
-      print(response[samout, ])
-      print("True and Prediction(s):")
-      names(predellall) <- nmp
-      print(cbind(response[samout, 1], response[samout, 
-                                                2], linpredall))
-      linpreds <- rbind(linpreds, linpredall)
-      predsbres <- rbind(predsbres, predellall)
     }
-  }
+  } #end for loop
+    
   if (model == "logistic" | model == "linear") {
     sams <- unlist(folds)
     od <- order(sams)
@@ -345,23 +263,5 @@
     mat <- data.frame(mat, whichfold)
     colnames(mat) <- c("TrueResponse", colnames(preds), "whichfold")
     return(mat)
-  }
-  else {
-    sams <- unlist(folds)
-    od <- order(sams)
-    mat <- data.frame(response[responsesam, 1], response[responsesam, 
-                                                         2], linpreds)[od, ]
-    mat <- data.frame(mat, whichfold)
-    predsbresord <- predsbres[od, ]
-    predsbresordlist <- list()
-    npred <- ncol(mat) - 2
-    nc <- ncol(predsbresord)
-    ncmat <- nc/npred
-    for (j in 1:npred) predsbresordlist <- c(predsbresordlist, 
-                                             list(predsbresord[, ((j - 1) * ncmat + 1):(j * ncmat)]))
-    names(predsbresordlist) <- nmp
-    colnames(mat) <- c("TrueSurv", "Status", nmp, "whichfold")
-    return(list(linpredmat = mat, breslowmats = predsbresordlist, 
-                obstimes = allobstimes))
   }
 }
