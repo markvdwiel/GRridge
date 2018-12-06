@@ -8,6 +8,6 @@ Maintainer: Mark A. van de Wiel <mark.vdwiel@vumc.nl>
 Depends: R (>= 3.2), penalized, Iso, survival, methods, graph,stats,glmnet,mvtnorm
 Suggests: testthat
 Description: This package allows the use of multiple sources of co-data (e.g. external p-values, gene lists, annotation) to improve prediction of binary, continuous and survival response using (logistic, linear or Cox) group-regularized ridge regression. It also facilitates post-hoc variable selection and prediction diagnostics by cross-validation using ROC curves and AUC.
-biocViews: Classification, Regression, Survival, Bayesian, RNASeq, GenePrediction, GeneExpression, Pathways, GeneSetEnrichment, GO, KEGG, GraphAndNetwork
+biocViews: Classification, Regression, Survival, Bayesian, RNASeq, GenePrediction, GeneExpression, Pathways, GeneSetEnrichment, GO, KEGG, GraphAndNetwork, ImmunoOncology
 License: GPL-3 
 LazyLoad: yes
