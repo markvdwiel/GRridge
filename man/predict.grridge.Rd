@@ -48,6 +48,7 @@ There is no further argument is used.
 \details{
 This function returns predictions of the response using the \code{\link{grridge}} output. It should be applied to samples NOT used for fitting of the models. About \code{recalibrate}: we noticed that 
  recalibration of the linear predictor using a simple regression (with intercept and slope) can improve predictive performance, e.g. in terms of brier score or mean square error (not in terms of AUC, which is rank-based). We recommend to use it for large enough test sets (say >= 25 samples), in particular when one suspects that the test set could have somewhat different properties than the training set. 
+For survival, the proportional hazards are returned, i.e. exp(linear predictor). If survival time predictions are desired, these may be obtained by applying \code{predict} to fit objects, which are stored as output of \code{\link{grridge}}.
 }
 \value{
 A matrix containing the predictions from all models available in \code{grridge}. 

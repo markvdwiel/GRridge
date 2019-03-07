@@ -6,8 +6,6 @@ predict.grridge <- function (object, datanew, printpred = FALSE,
   grr <- object
   model <- grr$model
   
-  
-  
   if (!(is.null(grr$arguments$dataunpen)) & recalibrate == 
         TRUE) {
     recalibrate <- FALSE
@@ -101,7 +99,17 @@ predict.grridge <- function (object, datanew, printpred = FALSE,
       predobj <- penobj[[ell]]
       lmvecall <- grr$lambdamultvec[, ell]
       Xsamw <- t(t(Xsam)/sqrt(lmvecall))
-      predell <- predict(predobj, Xsamw, data = dataunpensam)[1:npred]
+      #predell <- predict(predobj, Xsamw, data = dataunpensam)[1:npred]
+      #UPDATE 7-3-2019
+      if(model != "survival")  predell <- predict(predobj, Xsamw, unpenalized = unpenal,  data = dataunpensam)[1:npred]
+      else { #survival (PENALIZED DOES NOT SUPPLY linear predictor...
+        mmunpen <- as.matrix(model.matrix(unpenal, dataunpensam))
+        wh <- match(names(predobj@unpenalized),colnames(mmunpen))
+        coeffpen <- matrix(predobj@penalized, ncol = 1)
+        coeffunpen <- matrix(predobj@unpenalized, ncol = 1)
+        if (length(coeffunpen) == 0) predell <- exp(Xsamw %*% coeffpen) else predell <- exp(Xsamw %*%  coeffpen + 
+                                                                                              mmunpen[,wh,drop=FALSE] %*% coeffunpen)
+      }
       predellall <- cbind(predellall, predell)
       if (recalibrate) {
         datlp <- Xsamw %*% predobj@penalized
@@ -122,7 +130,18 @@ predict.grridge <- function (object, datanew, printpred = FALSE,
     lmvecall <- grr$lambdamultvec[, nc]
     Xsamw <- t(t(Xsam)/sqrt(lmvecall))
     Xsamw <- Xsamw[, whsel, drop = FALSE]
-    predell <- predict(predobj, Xsamw, data = dataunpensam)[1:npred]
+    #predell <- predict(predobj, Xsamw, data = dataunpensam)[1:npred]
+    #UPDATE 7-3-2019
+    if(model != "survival")  predell <- predict(predobj, Xsamw, unpenalized = unpenal,  data = dataunpensam)[1:npred]
+    else { #survival (PENALIZED DOES NOT SUPPLY linear predictor...
+      mmunpen <- as.matrix(model.matrix(unpenal, dataunpensam))
+      wh <- match(names(predobj@unpenalized),colnames(mmunpen))
+      coeffpen <- matrix(predobj@penalized, ncol = 1)
+      coeffunpen <- matrix(predobj@unpenalized, ncol = 1)
+      if (length(coeffunpen) == 0) predell <- exp(Xsamw %*% coeffpen) else predell <- exp(Xsamw %*%  coeffpen + 
+                                                                                      mmunpen[,wh,drop=FALSE] %*% coeffunpen)
+    }
+    
     predellall <- cbind(predellall, predell)
     if (recalibrate) {
       datlp <- Xsamw %*% predobj@penalized
@@ -139,7 +158,10 @@ predict.grridge <- function (object, datanew, printpred = FALSE,
     print(paste("takelasso",take))
     predobj <- penobj[[take]]
     
-    predell <- as.numeric(predict(predobj,cbind(Xsam,mmout),s=c(optllasso),offset=offsout,type="response"))
+    #UPDATE 7-3-2019
+    predell <- try(as.numeric(predict(predobj,cbind(Xsam,mmout),s=c(optllasso),offset=offsout, type="response")), silent=T)
+    if(class(predell) == "try-error") predell <- as.numeric(predict(predobj,cbind(Xsam,mmout),s=c(optllasso),newoffset=offsout,type="response"))
+    
     
     predellall <- cbind(predellall, predell)
     if (recalibrate) {
