@@ -163,13 +163,25 @@ grridge <- function(highdimdata, response, partitions, unpenal = ~1,
   if(is.null(dataunpen)) datapred <- data.frame(fake=rep(NA,ncol(highdimdata))) else datapred <- dataunpen
   nopen <- unpenal
   
+  nsam <- ncol(highdimdata)
+  nfeat <- nrow(highdimdata)
+  
   if(is.null(innfold)) foldinit <- nsam else foldinit <- innfold
   pmt0<- proc.time()
   optl0 <- optl
   if(is.null(optl)){
     print("Finding lambda for initial ridge regression")
     if(fixedfoldsinn) set.seed(346477)
-    opt <- optL2(response, penalized = t(highdimdata),fold=foldinit,unpenalized=nopen,data=datapred,trace=trace)
+    
+    #NEW 16-4-2019
+    if(nfeat > nsam){
+    print("p>n: applying Fast CV using SVD")
+      hdsvd <- svd(t(highdimdata))
+      hdF <- t(highdimdata) %*% hdsvd$v
+      opt <- optL2(response, penalized = hdF,fold=foldinit,unpenalized=nopen,data=datapred,trace=trace)
+    } else {
+      opt <- optL2(response, penalized = t(highdimdata),fold=foldinit,unpenalized=nopen,data=datapred,trace=trace)
+    }
     time1 <- proc.time()-pmt0
     print(opt$cv)
     print(paste("Computation time for cross-validating main penalty parameter:",time1[3]))
@@ -182,8 +194,6 @@ grridge <- function(highdimdata, response, partitions, unpenal = ~1,
     arguments$optl <- optl
   }
   pmt <- proc.time()
-  nsam <- ncol(highdimdata)
-  nfeat <- nrow(highdimdata)
   XM0 <- t(highdimdata)
   response0 <- response
   
@@ -200,7 +210,13 @@ grridge <- function(highdimdata, response, partitions, unpenal = ~1,
       if(fixedfoldsinn) set.seed(346477)
     } else {nf <- opt$fold}
   }
-  opt2 <- cvl(responsemin, penalized = XM0,fold=nf, lambda2 = optl,unpenalized=nopen,data=datapred,trace=trace)
+  if(nfeat > nsam){
+    hdsvd <- svd(XM0)
+    hdF <- XM0 %*% hdsvd$v
+    opt2 <- cvl(responsemin, penalized = hdF,fold=nf, lambda2 = optl,unpenalized=nopen,data=datapred,trace=trace)
+  } else {
+    opt2 <- cvl(responsemin, penalized = XM0,fold=nf, lambda2 = optl,unpenalized=nopen,data=datapred,trace=trace)
+  }
   nf <- opt2$fold 
   cvln0 <- opt2$cvl
   
